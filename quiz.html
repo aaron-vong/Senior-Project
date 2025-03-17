@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASL Quiz Mode</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #5F9EA0;
+            color: #FFEFD5;
+            text-align: center;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 50px;
+            margin-top: 50px;
+        }
+        .letter-container {
+            width: 40%;
+            text-align: center;
+        }
+        .letter-image {
+            width: 100%;
+            border-radius: 10px;
+        }
+        .video-container {
+            position: relative;
+            width: 50%;
+        }
+        #videoElement {
+            width: 100%;
+            border: 2px solid #FFEFD5;
+            border-radius: 10px;
+        }
+        .button {
+            background-color: #F08080;
+            color: #FFEFD5;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .button:hover {
+            background-color: #f0f0f0;
+            color: black;
+        }
+        #quizResult {
+            margin-top: 20px;
+            font-size: 1.5em;
+        }
+        #gestureOutput {
+            margin-top: 20px;
+            font-size: 2em;
+            color: #F08080;
+        }
+    </style>
+</head>
+<body>
+    <h1>ASL Quiz Mode</h1>
+    <p>Perform the sign for the letter shown on the screen. You only get one attempt for each letter.</p>
+
+    <div class="container">
+        <!-- Letter to Quiz -->
+        <div class="letter-container">
+            <h2>Sign the Letter:</h2>
+            <img id="letterImage" class="letter-image" src="images/a.jpg" alt="ASL Letter A">
+            <!-- Image will change dynamically based on the quiz letter -->
+        </div>
+
+        <!-- Video feed for hand tracking -->
+        <div class="video-container">
+            <video id="videoElement" autoplay></video>
+        </div>
+    </div>
+
+    <!-- Output detected letter -->
+    <p id="gestureOutput">Perform the gesture to answer the quiz!</p>
+
+    <!-- Quiz Result -->
+    <div id="quizResult"></div>
+
+    <!-- Back button -->
+    <button class="button" onclick="window.history.back()">Back</button>
+
+    <!-- TensorFlow.js & HandPose Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose"></script>
+    <script>
+        let videoElement = document.getElementById("videoElement");
+        let gestureOutput = document.getElementById("gestureOutput");
+        let letterImage = document.getElementById("letterImage");
+        let quizResult = document.getElementById("quizResult");
+
+        const alphabet = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
+
+        let currentLetterIndex = 0;
+        let correctAnswers = 0;
+        let incorrectAnswers = 0;
+        let quizHistory = [];
+
+        async function setupWebcam() {
+            const videoStream = await navigator.mediaDevices.getUserMedia({
+                video: true
+            });
+            videoElement.srcObject = videoStream;
+        }
+
+        async function loadHandposeModel() {
+            // Load the HandPose model
+            const model = await handpose.load();
+            console.log("HandPose model loaded");
+
+            // Start quiz after the model is loaded
+            startQuiz(model);
+        }
+
+        async function startQuiz(model) {
+            await setupWebcam();
+            loadNextLetter(model);
+        }
+
+        async function loadNextLetter(model) {
+            // Randomly pick a letter from the alphabet
+            currentLetterIndex = Math.floor(Math.random() * alphabet.length);
+            const currentLetter = alphabet[currentLetterIndex];
+
+            // Change the image for the current letter
+            letterImage.src = `images/${currentLetter}.jpg`;
+
+            // Detect hand gesture for the current letter
+            detectHandGesture(model, currentLetter);
+        }
+
+        async function detectHandGesture(model, correctLetter) {
+            const predictions = await model.estimateHands(videoElement);
+
+            if (predictions.length > 0) {
+                // Analyze the hand gesture
+                const hand = predictions[0];
+                let detectedLetter = "unknown"; // Placeholder for detected letter
+
+                // For simplicity, we just show the letter "A" here, replace with your gesture recognition logic
+                detectedLetter = "a"; // Example, replace with real gesture recognition
+
+                // If the detected letter matches the expected letter
+                if (detectedLetter === correctLetter) {
+                    correctAnswers++;
+                    quizHistory.push({ letter: correctLetter, correct: true });
+                    gestureOutput.textContent = `Correct! You signed ${correctLetter.toUpperCase()}`;
+                } else {
+                    incorrectAnswers++;
+                    quizHistory.push({ letter: correctLetter, correct: false });
+                    gestureOutput.textContent = `Incorrect! Expected: ${correctLetter.toUpperCase()}`;
+                }
+
+                // Wait for a short moment before moving to the next letter
+                setTimeout(() => {
+                    if (currentLetterIndex < alphabet.length - 1) {
+                        loadNextLetter(model);
+                    } else {
+                        showQuizResults();
+                    }
+                }, 1000); // 1 second delay
+            }
+
+            // Continue detecting
+            requestAnimationFrame(() => detectHandGesture(model, correctLetter));
+        }
+
+        function showQuizResults() {
+            let totalQuestions = correctAnswers + incorrectAnswers;
+            let scorePercentage = (correctAnswers / totalQuestions) * 100;
+            let resultText = `
+                <h2>Quiz Completed!</h2>
+                <p>You answered ${correctAnswers} correctly and ${incorrectAnswers} incorrectly.</p>
+                <p>Score: ${correctAnswers}/${totalQuestions} (${scorePercentage.toFixed(2)}%)</p>
+                <h3>Quiz History:</h3>
+                <ul>
+                    ${quizHistory.map(item => {
+                        return `<li>Letter ${item.letter.toUpperCase()}: ${item.correct ? 'Correct' : 'Incorrect'}</li>`;
+                    }).join('')}
+                </ul>
+            `;
+            quizResult.innerHTML = resultText;
+        }
+
+        // Load the model and start the quiz
+        loadHandposeModel();
+    </script>
+</body>
+</html>

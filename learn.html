@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learn ASL Alphabet</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #5F9EA0;
+            color: #FFEFD5;
+            text-align: center;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 50px;
+            margin-top: 50px;
+        }
+        .video-container {
+            position: relative;
+            width: 50%;
+        }
+        #videoElement {
+            width: 100%;
+            border: 2px solid #FFEFD5;
+            border-radius: 10px;
+        }
+        .letter-container {
+            width: 40%;
+            text-align: center;
+        }
+        .letter-image {
+            width: 100%;
+            border-radius: 10px;
+        }
+        .button {
+            background-color: #F08080;
+            color: #FFEFD5;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .button:hover {
+            background-color: #f0f0f0;
+            color: black;
+        }
+        #gestureOutput {
+            margin-top: 20px;
+            font-size: 2em;
+            color: #F08080;
+        }
+    </style>
+</head>
+<body>
+    <h1>Learn the ASL Alphabet</h1>
+    <p>Use your hands to learn the American Sign Language alphabet. Perform a gesture, and we will recognize it!</p>
+
+    <div class="container">
+        <!-- Letter to Learn -->
+        <div class="letter-container">
+            <h2>Learn Letter: A</h2>
+            <img id="letterImage" class="letter-image" src="images/a.jpg" alt="ASL Letter A">
+            <!-- Add a letter image in the folder -->
+        </div>
+
+        <!-- Video feed for hand tracking -->
+        <div class="video-container">
+            <video id="videoElement" autoplay></video>
+        </div>
+    </div>
+
+    <!-- Output detected letter -->
+    <p id="gestureOutput">Perform a gesture to start learning the alphabet!</p>
+
+    <!-- Back button -->
+    <button class="button" onclick="window.history.back()">Back</button>
+
+    <!-- TensorFlow.js & HandPose Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose"></script>
+    <script>
+        let videoElement = document.getElementById("videoElement");
+        let gestureOutput = document.getElementById("gestureOutput");
+        let letterImage = document.getElementById("letterImage");
+
+        async function setupWebcam() {
+            const videoStream = await navigator.mediaDevices.getUserMedia({
+                video: true
+            });
+            videoElement.srcObject = videoStream;
+        }
+
+        async function loadHandposeModel() {
+            // Load the HandPose model
+            const model = await handpose.load();
+            console.log("HandPose model loaded");
+
+            // Detect hands in the video stream
+            detectHandGesture(model);
+        }
+
+        async function detectHandGesture(model) {
+            // Set up a loop to continuously detect hand gestures
+            const predictions = await model.estimateHands(videoElement);
+
+            if (predictions.length > 0) {
+                // If a hand is detected, analyze the gesture
+                const hand = predictions[0];
+
+                // Example: You can detect a hand gesture and update the displayed letter
+                // (for simplicity, this will show "A", but you should implement gesture recognition)
+                gestureOutput.textContent = "Detected Gesture: A"; // Show detected letter
+
+                // For demonstration, we are just showing "A" here.
+                // Replace with your gesture recognition logic for different letters.
+            }
+
+            // Keep detecting by calling the function again
+            requestAnimationFrame(() => detectHandGesture(model));
+        }
+
+        // Initialize the webcam and model
+        setupWebcam().then(() => {
+            loadHandposeModel();
+        });
+    </script>
+</body>
+</html>
