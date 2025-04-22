@@ -1,101 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SignFlow</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #5F9EA0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            color: #FFEFD5;
-            text-align: center;
-            flex-direction: column;
-        }
-        .container {
-            padding: 20px;
-            border-radius: 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            transition: transform 0.8s ease-in-out, opacity 0.8s ease-in-out;
-        }
-        .hidden {
-            transform: translateY(100px); /* Move down */
-            opacity: 0; /* Fade out */
-            pointer-events: none; /* Disable interaction when hidden */
-        }
-        h1 {
-            font-size: 4em;
-            margin-bottom: 20px;
-        }
-        .cursive {
-            font-family: 'Brush Script MT', cursive;
-        }
-        p {
-            font-size: 1.2em;
-            margin-bottom: 20px;
-        }
-        .button {
-            background-color: #F08080;
-            color: #FFEFD5;
-            padding: 15px 30px;
-            border: none;
-            border-radius: 50px;
-            font-size: 1.2em;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-            margin-top: 20px;
-        }
-        .button:hover {
-            background-color: #f0f0f0;
-            color: black;
-        }
-        #modeButtons {
-            display: none; /* Start hidden */
-            flex-direction: row; /* Arrange buttons side by side */
-            gap: 20px; /* Space between buttons */
-            opacity: 0;
-            transition: opacity 0.5s ease-in-out;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SignFlow</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #5F9EA0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      color: #FFEFD5;
+      text-align: center;
+      flex-direction: column;
+    }
+    .container {
+      padding: 20px;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: transform 0.8s ease-in-out, opacity 0.8s ease-in-out;
+    }
+    .hidden {
+      transform: translateY(100px);
+      opacity: 0;
+      pointer-events: none;
+    }
+    h1 {
+      font-size: 4em;
+      margin-bottom: 20px;
+    }
+    .cursive {
+      font-family: 'Brush Script MT', cursive;
+    }
+    p {
+      font-size: 1.2em;
+      margin-bottom: 20px;
+    }
+    .button {
+      background-color: #F08080;
+      color: #FFEFD5;
+      padding: 15px 30px;
+      border: none;
+      border-radius: 50px;
+      font-size: 1.2em;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      margin-top: 20px;
+    }
+    .button:hover {
+      background-color: #f0f0f0;
+      color: black;
+    }
+    #modeButtons {
+      display: none;
+      flex-direction: row;
+      gap: 20px;
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+    }
+  </style>
 </head>
 <body>
-    <div class="container" id="mainContent">
-        <h1>Sign<span class="cursive">Flow</span></h1>
-        <p>Learn the ABC in American Sign Language</p>
-        <p>With machine learning</p>
-        <button class="button" id="startButton">Start</button>
-        <p>The purpose of this website is to teach you the basic alphabet of the American Sign Language.</p>
-    </div>
+  <div class="container" id="mainContent">
+    <h1>Sign<span class="cursive">Flow</span></h1>
+    <p>Learn the ABC in American Sign Language</p>
+    <p>With machine learning</p>
+    <button class="button" id="startButton">Start</button>
+    <p>The purpose of this website is to teach you the basic alphabet of the American Sign Language.</p>
+  </div>
 
-    <div id="modeButtons">
-        <button class="button" onclick="location.href='learn.html'">Learn</button>
-        <button class="button" onclick="location.href='quiz.html'">Quiz</button>
-    </div>
+  <div id="modeButtons">
+    <button class="button" onclick="location.href='learn.html'">Learn</button>
+    <button class="button" onclick="location.href='quiz.html'">Quiz</button>
+  </div>
 
-    <script>
-        document.getElementById("startButton").addEventListener("click", function() {
-            let content = document.getElementById("mainContent");
-            let modeButtons = document.getElementById("modeButtons");
+  <script>
+    document.getElementById("startButton").addEventListener("click", function () {
+      let content = document.getElementById("mainContent");
+      let modeButtons = document.getElementById("modeButtons");
 
-            // Apply the falling animation
-            content.classList.add("hidden");
-
-            // Wait for the animation to complete before hiding content and showing new buttons
-            setTimeout(() => {
-                content.style.display = "none";
-                modeButtons.style.display = "flex"; // Make buttons visible
-                setTimeout(() => modeButtons.style.opacity = "1", 50); // Fade in buttons
-            }, 800); // Matches transition duration
-        });
-    </script>
+      content.classList.add("hidden");
+      setTimeout(() => {
+        content.style.display = "none";
+        modeButtons.style.display = "flex";
+        setTimeout(() => modeButtons.style.opacity = "1", 50);
+      }, 800);
+    });
+  </script>
 </body>
 </html>
-
-

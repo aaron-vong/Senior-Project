@@ -1,134 +1,162 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Learn ASL Alphabet</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #5F9EA0;
-            color: #FFEFD5;
-            text-align: center;
-            padding: 20px;
-        }
-        .container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 50px;
-            margin-top: 50px;
-        }
-        .video-container {
-            position: relative;
-            width: 50%;
-        }
-        #videoElement {
-            width: 100%;
-            border: 2px solid #FFEFD5;
-            border-radius: 10px;
-        }
-        .letter-container {
-            width: 40%;
-            text-align: center;
-        }
-        .letter-image {
-            width: 100%;
-            border-radius: 10px;
-        }
-        .button {
-            background-color: #F08080;
-            color: #FFEFD5;
-            padding: 15px 30px;
-            border: none;
-            border-radius: 50px;
-            font-size: 1.2em;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-        .button:hover {
-            background-color: #f0f0f0;
-            color: black;
-        }
-        #gestureOutput {
-            margin-top: 20px;
-            font-size: 2em;
-            color: #F08080;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <title>Learn the ASL Alphabet</title>
+  <script src="libs/tf.min.js"></script>
+  <script src="libs/teachablemachine-image.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      background-color: #5F9EA0;
+      color: #FFEFD5;
+      text-align: center;
+      margin: 0;
+      padding: 30px;
+    }
+
+    h1 {
+      margin-bottom: 0;
+    }
+
+    .subtitle {
+      margin-top: 0;
+      font-size: 1.1em;
+    }
+
+    .row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 60px;
+      margin-top: 30px;
+      flex-wrap: wrap;
+    }
+
+    .box {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+    }
+
+    #asl-image {
+      width: 300px;
+      height: auto;
+    }
+
+    #webcam-container canvas {
+      border-radius: 10px;
+    }
+
+    #label-container {
+      font-size: 1.2em;
+      margin-top: 10px;
+    }
+
+    #feedback {
+      font-size: 1.8em;
+      margin-top: 20px;
+    }
+  </style>
 </head>
 <body>
-    <h1>Learn the ASL Alphabet</h1>
-    <p>Use your hands to learn the American Sign Language alphabet. Perform a gesture, and we will recognize it!</p>
+  <h1>Learn the ASL Alphabet</h1>
+  <p class="subtitle">Use your hands to learn the American Sign Language alphabet. Perform a gesture, and we will recognize it!</p>
+  <h2 id="current-letter">Learn Letter: A</h2>
 
-    <div class="container">
-        <!-- Letter to Learn -->
-        <div class="letter-container">
-            <h2>Learn Letter: A</h2>
-            <img id="letterImage" class="letter-image" src="https://i.pinimg.com/474x/de/49/6e/de496e8a5f327b0feeedc9e0c7c525e5.jpg" alt="ASL Letter A">
-            <!-- Add a letter image in the folder -->
-        </div>
-
-        <!-- Video feed for hand tracking -->
-        <div class="video-container">
-            <video id="videoElement" autoplay></video>
-        </div>
+  <div class="row">
+    <div class="box">
+      <img id="asl-image" src="images/A.jpg" alt="Sign for letter A">
     </div>
+    <div class="box" id="webcam-container"></div>
+  </div>
 
-    <!-- Output detected letter -->
-    <p id="gestureOutput">Perform a gesture to start learning the alphabet!</p>
+  <div id="label-container"></div>
+  <div id="feedback"></div>
 
-    <!-- Back button -->
-    <button class="button" onclick="window.history.back()">Back</button>
-
-    <!-- TensorFlow.js & HandPose Library -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose"></script>
-    <script>
-        let videoElement = document.getElementById("videoElement");
-        let gestureOutput = document.getElementById("gestureOutput");
-        let letterImage = document.getElementById("letterImage");
-
-        async function setupWebcam() {
-            const videoStream = await navigator.mediaDevices.getUserMedia({
-                video: true
-            });
-            videoElement.srcObject = videoStream;
-        }
-
-        async function loadHandposeModel() {
-            // Load the HandPose model
-            const model = await handpose.load();
-            console.log("HandPose model loaded");
-
-            // Detect hands in the video stream
-            detectHandGesture(model);
-        }
-
-        async function detectHandGesture(model) {
-            // Set up a loop to continuously detect hand gestures
-            const predictions = await model.estimateHands(videoElement);
-
-            if (predictions.length > 0) {
-                // If a hand is detected, analyze the gesture
-                const hand = predictions[0];
-
-                // Example: You can detect a hand gesture and update the displayed letter
-                // (for simplicity, this will show "A", but you should implement gesture recognition)
-                gestureOutput.textContent = "Detected Gesture: A"; // Show detected letter
-
-                // For demonstration, we are just showing "A" here.
-                // Replace with your gesture recognition logic for different letters.
+  <script>
+    const letters = ["A", "B"]; // Limit to trained letters for now
+    let currentIndex = 0;
+    let currentLetter = letters[currentIndex];
+    let model, webcam, labelContainer;
+  
+    let holdStartTime = null;
+    const REQUIRED_HOLD_TIME = 2000; // milliseconds
+    const REQUIRED_CONFIDENCE = 0.95;
+  
+    const successSound = new Audio("success.mp3"); // Place this file in the same folder as your HTML
+  
+    async function init() {
+      const modelURL = "model/model.json";
+      const metadataURL = "model/metadata.json";
+  
+      try {
+        model = await tmImage.load(modelURL, metadataURL);
+      } catch (err) {
+        console.error("Model load failed:", err);
+        document.getElementById("label-container").innerText = "❌ Model failed to load.";
+        return;
+      }
+  
+      webcam = new tmImage.Webcam(224, 224, true);
+      await webcam.setup();
+      await webcam.play();
+      document.getElementById("webcam-container").appendChild(webcam.canvas);
+      labelContainer = document.getElementById("label-container");
+  
+      updateLetter();
+      window.requestAnimationFrame(loop);
+    }
+  
+    function updateLetter() {
+      currentLetter = letters[currentIndex];
+      document.getElementById("current-letter").innerText = `Learn Letter: ${currentLetter}`;
+      document.getElementById("feedback").innerText = "";
+      document.getElementById("asl-image").src = `images/${currentLetter}.png`;
+      holdStartTime = null;
+    }
+  
+    async function loop() {
+      webcam.update();
+      await predict();
+      window.requestAnimationFrame(loop);
+    }
+  
+    async function predict() {
+      const prediction = await model.predict(webcam.canvas);
+      prediction.sort((a, b) => b.probability - a.probability);
+      const top = prediction[0];
+      labelContainer.innerText = `Prediction: ${top.className} (${(top.probability * 100).toFixed(1)}%)`;
+  
+      const now = Date.now();
+  
+      if (
+        top.className === currentLetter &&
+        top.probability >= REQUIRED_CONFIDENCE
+      ) {
+        if (!holdStartTime) {
+          holdStartTime = now;
+        } else if (now - holdStartTime >= REQUIRED_HOLD_TIME) {
+          document.getElementById("feedback").innerText = "✅ Correct!";
+          successSound.play();
+  
+          setTimeout(() => {
+            currentIndex++;
+            if (currentIndex < letters.length) {
+              updateLetter();
+            } else {
+              document.getElementById("current-letter").innerText = "🎉 You've completed Learn Mode!";
+              document.getElementById("feedback").innerText = "";
             }
-
-            // Keep detecting by calling the function again
-            requestAnimationFrame(() => detectHandGesture(model));
+          }, 1000);
         }
-
-        // Initialize the webcam and model
-        setupWebcam().then(() => {
-            loadHandposeModel();
-        });
-    </script>
+      } else {
+        holdStartTime = null; // Reset hold time if user breaks the pose
+      }
+    }
+  
+    init();
+  </script>
+  
 </body>
 </html>
