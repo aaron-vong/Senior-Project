@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TFJS Handpose Demo</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #000;
+    }
+    video, canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+    }
+  </style>
+</head>
+<body>
+  <video id="video" autoplay playsinline muted></video>
+  <canvas id="canvas"></canvas>
+
+  <!-- TensorFlow + Handpose -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose"></script>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Connect specific landmark indices
+    const CONNECTED_POINTS = [
+      [0, 1], [1, 2], [2, 3], [3, 4],       // Thumb
+      [0, 5], [5, 6], [6, 7], [7, 8],       // Index
+      [5, 9], [9, 10], [10, 11], [11, 12],  // Middle
+      [9, 13], [13, 14], [14, 15], [15, 16],// Ring
+      [13, 17], [17, 18], [18, 19], [19, 20],// Pinky
+      [0, 17]                               // Palm base to pinky base
+    ];
+
+    async function setupCamera() {
+      video.width = window.innerWidth;
+      video.height = window.innerHeight;
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user' },
+        audio: false
+      });
+      video.srcObject = stream;
+
+      return new Promise(resolve => {
+        video.onloadedmetadata = () => {
+          resolve(video);
+        };
+      });
+    }
+
+    async function main() {
+      await setupCamera();
+      video.play();
+
+      const model = await handpose.load();
+      console.log("Handpose model loaded");
+
+      async function detect() {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        const predictions = await model.estimateHands(video, true);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (predictions.length > 0) {
+          const landmarks = predictions[0].landmarks;
+
+          // Draw points
+          for (let i = 0; i < landmarks.length; i++) {
+            const [x, y] = landmarks[i];
+            ctx.beginPath();
+            ctx.arc(x, y, 4, 0, 2 * Math.PI);
+            ctx.fillStyle = '#00FFFF';
+            ctx.fill();
+          }
+
+          // Draw lines
+          for (const [start, end] of CONNECTED_POINTS) {
+            const [x1, y1] = landmarks[start];
+            const [x2, y2] = landmarks[end];
+
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.strokeStyle = '#FF00AA';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+        }
+
+        requestAnimationFrame(detect);
+      }
+
+      detect();
+    }
+
+    main();
+  </script>
+</body>
+</html>

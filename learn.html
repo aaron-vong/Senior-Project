@@ -34,9 +34,9 @@
     }
 
     .box {
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
+      background: rgb(17, 132, 134);
+      padding: 5px;
+      border-radius: 5px;
     }
 
     #asl-image {
@@ -45,8 +45,26 @@
     }
 
     #webcam-container canvas {
-      border-radius: 10px;
+      border-radius: 5px;
     }
+
+    .button {
+      background-color: #F08080;
+      color: #FFEFD5;
+      padding: 15px 30px;
+      border: none;
+      border-radius: 50px;
+      font-size: 1.2em;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      margin-top: 20px;
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .button:hover {
+            background-color: #f0f0f0;
+            color: black;
+        }
 
     #label-container {
       font-size: 1.2em;
@@ -75,14 +93,15 @@
   <div id="feedback"></div>
 
   <script>
-    const letters = ["A", "B"]; // Limit to trained letters for now
+    let isTransitioning = false;
+    const letters = ["A", "B", "C", "D", "E"]; // Limit to trained letters for now
     let currentIndex = 0;
     let currentLetter = letters[currentIndex];
     let model, webcam, labelContainer;
   
     let holdStartTime = null;
-    const REQUIRED_HOLD_TIME = 2000; // milliseconds
-    const REQUIRED_CONFIDENCE = 0.95;
+    const REQUIRED_HOLD_TIME = 500; // milliseconds
+    const REQUIRED_CONFIDENCE = 0.90;
   
     const successSound = new Audio("success.mp3"); // Place this file in the same folder as your HTML
   
@@ -90,6 +109,7 @@
       const modelURL = "model/model.json";
       const metadataURL = "model/metadata.json";
   
+      // Model Loading
       try {
         model = await tmImage.load(modelURL, metadataURL);
       } catch (err) {
@@ -98,7 +118,7 @@
         return;
       }
   
-      webcam = new tmImage.Webcam(224, 224, true);
+      webcam = new tmImage.Webcam(500, 450, true);
       await webcam.setup();
       await webcam.play();
       document.getElementById("webcam-container").appendChild(webcam.canvas);
@@ -122,41 +142,49 @@
       window.requestAnimationFrame(loop);
     }
   
-    async function predict() {
-      const prediction = await model.predict(webcam.canvas);
-      prediction.sort((a, b) => b.probability - a.probability);
-      const top = prediction[0];
-      labelContainer.innerText = `Prediction: ${top.className} (${(top.probability * 100).toFixed(1)}%)`;
-  
-      const now = Date.now();
-  
-      if (
-        top.className === currentLetter &&
-        top.probability >= REQUIRED_CONFIDENCE
-      ) {
-        if (!holdStartTime) {
-          holdStartTime = now;
-        } else if (now - holdStartTime >= REQUIRED_HOLD_TIME) {
-          document.getElementById("feedback").innerText = "✅ Correct!";
-          successSound.play();
-  
-          setTimeout(() => {
-            currentIndex++;
-            if (currentIndex < letters.length) {
-              updateLetter();
-            } else {
-              document.getElementById("current-letter").innerText = "🎉 You've completed Learn Mode!";
-              document.getElementById("feedback").innerText = "";
-            }
-          }, 1000);
+  async function predict() {
+  const prediction = await model.predict(webcam.canvas);
+  prediction.sort((a, b) => b.probability - a.probability);
+  const top = prediction[0];
+  labelContainer.innerText = `Prediction: ${top.className} (${(top.probability * 100).toFixed(1)}%)`;
+
+  const now = Date.now();
+
+  if (
+    !isTransitioning &&
+    top.className === currentLetter &&
+    top.probability >= REQUIRED_CONFIDENCE
+  ) {
+    if (!holdStartTime) {
+      holdStartTime = now;
+    } else if (now - holdStartTime >= REQUIRED_HOLD_TIME) {
+      document.getElementById("feedback").innerText = "✅ Correct!";
+      successSound.play();
+
+      isTransitioning = true; // prevent more transitions
+
+      setTimeout(() => {
+        currentIndex++;
+        if (currentIndex < letters.length) {
+          updateLetter();
+          isTransitioning = false; // allow next transition
+        } else {
+          document.getElementById("current-letter").innerText = "🎉 You've completed Learn Mode!";
+          document.getElementById("feedback").innerText = "";
         }
-      } else {
-        holdStartTime = null; // Reset hold time if user breaks the pose
-      }
+      }, 1000);
     }
+  } else {
+    holdStartTime = null;
+  }
+}
+
   
     init();
   </script>
-  
+  <div class="mt-12 text-center">
+    <button class="button" onclick="window.history.back()">Back</button>
+  </div>
+
 </body>
 </html>

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SignFlow - ASL Alphabet Learning</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose@0.0.7"></script>
+    <style>
+        .progress-bar {
+            transition: width 0.5s ease-in-out;
+        }
+        .letter-card {
+            transition: all 0.3s ease;
+        }
+        .letter-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+        .webcam-container {
+            position: relative;
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        .webcam-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 1.5rem;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="mb-8 text-center">
+            <h1 class="text-4xl font-bold text-indigo-600 mb-2">SignFlow</h1>
+            <p class="text-gray-600">Learn the ASL alphabet with machine learning</p>
+        </header>
+
+        <!-- Progress Bar -->
+        <div class="bg-white rounded-lg shadow-md p-4 mb-8">
+            <div class="flex justify-between mb-2">
+                <span class="font-medium text-gray-700">Progress</span>
+                <span id="progress-count" class="font-medium text-indigo-600">0/26</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-4">
+                <div id="progress-bar" class="progress-bar h-4 rounded-full bg-indigo-600" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- ASL Letter Display -->
+            <div class="flex-1 bg-white rounded-lg shadow-md p-6 flex flex-col items-center justify-center">
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-2">Current Letter</h2>
+                    <p class="text-gray-600">Try to sign this letter with your hand</p>
+                </div>
+                
+                <div id="letter-display" class="letter-card bg-indigo-50 rounded-xl p-8 mb-6">
+                    <img id="letter-image" src="https://www.signingsavvy.com/media/letter/a/8160/8160_large.png" alt="ASL Letter A" class="w-64 h-64 object-contain">
+                </div>
+                
+                <div class="text-center">
+                    <p id="letter-name" class="text-5xl font-bold text-indigo-600 mb-2">A</p>
+                    <p id="letter-instruction" class="text-gray-600">Make a fist with your thumb on the side</p>
+                </div>
+                
+                <button id="next-btn" class="mt-6 px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition duration-300">
+                    Next Letter
+                </button>
+            </div>
+            
+            <!-- Webcam Feed -->
+            <div class="flex-1">
+                <div class="webcam-container bg-gray-800 aspect-video">
+                    <div id="webcam-overlay" class="webcam-overlay">
+                        Loading model and camera...
+                    </div>
+                    <video id="webcam" autoplay playsinline class="w-full h-full object-cover"></video>
+                    <canvas id="output-canvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+                </div>
+                
+                <div class="mt-4 bg-white rounded-lg shadow-md p-4">
+                    <div class="flex justify-between items-center">
+                        <h3 class="font-medium text-gray-700">Detection Results</h3>
+                        <span id="confidence" class="text-sm font-medium text-indigo-600">Confidence: 0%</span>
+                    </div>
+                    <div class="mt-2">
+                        <p id="detection-result" class="text-gray-600">Show the current letter to the camera</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ASL alphabet data
+        const aslAlphabet = [
+            { letter: 'A', image: 'images/A.jpg', instruction: 'Make a fist with your thumb on the side' },
+            { letter: 'B', image: 'images/B.jpg', instruction: 'Palm out, fingers together and straight' },
+            { letter: 'C', image: 'https://www.signingsavvy.com/media/letter/c/8162/8162_large.png', instruction: 'Form a C shape with your hand' },
+            { letter: 'D', image: 'https://www.signingsavvy.com/media/letter/d/8163/8163_large.png', instruction: 'Point index finger up, other fingers in fist' },
+            { letter: 'E', image: 'https://www.signingsavvy.com/media/letter/e/8164/8164_large.png', instruction: 'Fingers curled in, thumb across fingers' },
+            { letter: 'F', image: 'https://www.signingsavvy.com/media/letter/f/8165/8165_large.png', instruction: 'Index and thumb form a circle, other fingers up' },
+            { letter: 'G', image: 'https://www.signingsavvy.com/media/letter/g/8166/8166_large.png', instruction: 'Index finger points left, thumb up' },
+            { letter: 'H', image: 'https://www.signingsavvy.com/media/letter/h/8167/8167_large.png', instruction: 'Index and middle finger point left, thumb up' },
+            { letter: 'I', image: 'https://www.signingsavvy.com/media/letter/i/8168/8168_large.png', instruction: 'Pinkie finger up, other fingers in fist' },
+            { letter: 'J', image: 'https://www.signingsavvy.com/media/letter/j/8169/8169_large.png', instruction: 'Pinkie finger up, move hand in J motion' },
+            { letter: 'K', image: 'https://www.signingsavvy.com/media/letter/k/8170/8170_large.png', instruction: 'Index and middle finger up, thumb between them' },
+            { letter: 'L', image: 'https://www.signingsavvy.com/media/letter/l/8171/8171_large.png', instruction: 'Index finger up, thumb out to form L' },
+            { letter: 'M', image: 'https://www.signingsavvy.com/media/letter/m/8172/8172_large.png', instruction: 'Thumb under first three fingers' },
+            { letter: 'N', image: 'https://www.signingsavvy.com/media/letter/n/8173/8173_large.png', instruction: 'Thumb under first two fingers' },
+            { letter: 'O', image: 'https://www.signingsavvy.com/media/letter/o/8174/8174_large.png', instruction: 'Form an O shape with all fingers' },
+            { letter: 'P', image: 'https://www.signingsavvy.com/media/letter/p/8175/8175_large.png', instruction: 'Index finger and thumb form P, other fingers down' },
+            { letter: 'Q', image: 'https://www.signingsavvy.com/media/letter/q/8176/8176_large.png', instruction: 'Thumb and index finger down, other fingers up' },
+            { letter: 'R', image: 'https://www.signingsavvy.com/media/letter/r/8177/8177_large.png', instruction: 'Cross middle finger over index finger' },
+            { letter: 'S', image: 'https://www.signingsavvy.com/media/letter/s/8178/8178_large.png', instruction: 'Make a fist with thumb over fingers' },
+            { letter: 'T', image: 'https://www.signingsavvy.com/media/letter/t/8179/8179_large.png', instruction: 'Make a fist with thumb between index and middle fingers' },
+            { letter: 'U', image: 'https://www.signingsavvy.com/media/letter/u/8180/8180_large.png', instruction: 'Index and middle finger up and together' },
+            { letter: 'V', image: 'https://www.signingsavvy.com/media/letter/v/8181/8181_large.png', instruction: 'Index and middle finger up and apart' },
+            { letter: 'W', image: 'https://www.signingsavvy.com/media/letter/w/8182/8182_large.png', instruction: 'Index, middle, and ring fingers up and apart' },
+            { letter: 'X', image: 'https://www.signingsavvy.com/media/letter/x/8183/8183_large.png', instruction: 'Make a fist with index finger bent' },
+            { letter: 'Y', image: 'https://www.signingsavvy.com/media/letter/y/8184/8184_large.png', instruction: 'Thumb and pinkie finger out, other fingers in' },
+            { letter: 'Z', image: 'https://www.signingsavvy.com/media/letter/z/8185/8185_large.png', instruction: 'Index finger draws a Z in the air' }
+        ];
+
+        // DOM elements
+        const letterImage = document.getElementById('letter-image');
+        const letterName = document.getElementById('letter-name');
+        const letterInstruction = document.getElementById('letter-instruction');
+        const progressCount = document.getElementById('progress-count');
+        const progressBar = document.getElementById('progress-bar');
+        const nextBtn = document.getElementById('next-btn');
+        const webcam = document.getElementById('webcam');
+        const outputCanvas = document.getElementById('output-canvas');
+        const webcamOverlay = document.getElementById('webcam-overlay');
+        const detectionResult = document.getElementById('detection-result');
+        const confidence = document.getElementById('confidence');
+
+        // App state
+        let currentLetterIndex = 0;
+        let learnedLetters = new Set();
+        let model = null;
+        let ctx = null;
+        let isPredicting = false;
+
+        // Initialize the app
+        function init() {
+            updateLetterDisplay();
+            setupWebcam();
+            setupCanvas();
+            loadModel();
+            
+            nextBtn.addEventListener('click', nextLetter);
+        }
+
+        // Update the letter display
+        function updateLetterDisplay() {
+            const currentLetter = aslAlphabet[currentLetterIndex];
+            letterImage.src = currentLetter.image;
+            letterName.textContent = currentLetter.letter;
+            letterInstruction.textContent = currentLetter.instruction;
+            
+            // Update progress
+            progressCount.textContent = `${learnedLetters.size}/26`;
+            progressBar.style.width = `${(learnedLetters.size / 26) * 100}%`;
+        }
+
+        // Move to the next letter
+        function nextLetter() {
+            currentLetterIndex = (currentLetterIndex + 1) % aslAlphabet.length;
+            updateLetterDisplay();
+        }
+
+        // Set up the webcam
+        async function setupWebcam() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                webcam.srcObject = stream;
+                
+                return new Promise((resolve) => {
+                    webcam.onloadedmetadata = () => {
+                        webcam.width = webcam.videoWidth;
+                        webcam.height = webcam.videoHeight;
+                        resolve();
+                    };
+                });
+            } catch (error) {
+                console.error('Error accessing webcam:', error);
+                webcamOverlay.textContent = 'Could not access webcam. Please enable camera permissions.';
+            }
+        }
+
+        // Set up the canvas for drawing
+        function setupCanvas() {
+            outputCanvas.width = webcam.width;
+            outputCanvas.height = webcam.height;
+            ctx = outputCanvas.getContext('2d');
+            ctx.translate(outputCanvas.width, 0);
+            ctx.scale(-1, 1);
+        }
+
+        // Load the handpose model
+        async function loadModel() {
+            try {
+                webcamOverlay.textContent = 'Loading hand detection model...';
+                model = await handpose.load();
+                webcamOverlay.style.display = 'none';
+                startPrediction();
+            } catch (error) {
+                console.error('Error loading model:', error);
+                webcamOverlay.textContent = 'Failed to load hand detection model.';
+            }
+        }
+
+        // Start the prediction loop
+        async function startPrediction() {
+            if (isPredicting) return;
+            
+            isPredicting = true;
+            
+            async function predict() {
+                if (!isPredicting) return;
+                
+                // Get predictions
+                const predictions = await model.estimateHands(webcam);
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+                
+                if (predictions.length > 0) {
+                    // Draw hand landmarks
+                    for (let i = 0; i < predictions.length; i++) {
+                        const prediction = predictions[i];
+                        
+                        // Draw landmarks
+                        ctx.fillStyle = 'red';
+                        for (let j = 0; j < prediction.landmarks.length; j++) {
+                            const landmark = prediction.landmarks[j];
+                            ctx.beginPath();
+                            ctx.arc(landmark[0], landmark[1], 5, 0, 2 * Math.PI);
+                            ctx.fill();
+                        }
+                        
+                        // Draw bounding box
+                        const bbox = prediction.boundingBox;
+                        ctx.strokeStyle = 'blue';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(
+                            bbox.topLeft[0], 
+                            bbox.topLeft[1], 
+                            bbox.bottomRight[0] - bbox.topLeft[0], 
+                            bbox.bottomRight[1] - bbox.topLeft[1]
+                        );
+                        
+                        // Simple gesture recognition (this would be replaced with your actual model)
+                        const currentLetter = aslAlphabet[currentLetterIndex].letter;
+                        const randomConfidence = Math.random() * 100;
+                        
+                        // For demo purposes, we'll randomly say the user got it right sometimes
+                        if (randomConfidence > 85) {
+                            detectionResult.textContent = `Detected letter: ${currentLetter}`;
+                            confidence.textContent = `Confidence: ${randomConfidence.toFixed(0)}%`;
+                            
+                            if (randomConfidence > 90) {
+                                learnedLetters.add(currentLetter);
+                                updateLetterDisplay();
+                                
+                                // Add visual feedback
+                                document.getElementById('letter-display').classList.add('bg-green-100');
+                                setTimeout(() => {
+                                    document.getElementById('letter-display').classList.remove('bg-green-100');
+                                }, 1000);
+                            }
+                        } else {
+                            detectionResult.textContent = 'Try to make the current letter more clearly';
+                            confidence.textContent = `Confidence: ${randomConfidence.toFixed(0)}%`;
+                        }
+                    }
+                } else {
+                    detectionResult.textContent = 'No hand detected. Show your hand to the camera.';
+                    confidence.textContent = 'Confidence: 0%';
+                }
+                
+                requestAnimationFrame(predict);
+            }
+            
+            predict();
+        }
+
+        // Initialize when the page loads
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
