@@ -1,113 +1,114 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TFJS Handpose Demo</title>
+  <meta charset="UTF-8">
+  <title>Hand Detection and Cropping</title>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
   <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background: #000;
-    }
-    video, canvas {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100vw;
-      height: 100vh;
-      object-fit: cover;
-    }
+    body { text-align: center; background: #222; color: white; }
+    canvas, video { display: 1; } /* Hide raw video/canvas */
   </style>
 </head>
 <body>
-  <video id="video" autoplay playsinline muted></video>
-  <canvas id="canvas"></canvas>
-
-  <!-- TensorFlow + Handpose -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose"></script>
+  <h1>Hand Crop + Teachable Machine</h1>
+  <video id="input_video" width="640" height="480" autoplay></video>
+  <canvas id="output_canvas" width="640" height="480"></canvas>
+  <canvas id="hand_canvas" width="224" height="224"></canvas> <!-- For hand crop -->
 
   <script>
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
+    const URL = "https://teachablemachine.withgoogle.com/models/sejlB6-6N/"; // <-- Put your model URL here
+    let model;
 
-    // Connect specific landmark indices
-    const CONNECTED_POINTS = [
-      [0, 1], [1, 2], [2, 3], [3, 4],       // Thumb
-      [0, 5], [5, 6], [6, 7], [7, 8],       // Index
-      [5, 9], [9, 10], [10, 11], [11, 12],  // Middle
-      [9, 13], [13, 14], [14, 15], [15, 16],// Ring
-      [13, 17], [17, 18], [18, 19], [19, 20],// Pinky
-      [0, 17]                               // Palm base to pinky base
-    ];
+    // Setup video
+    const videoElement = document.getElementById('input_video');
+    const outputCanvas = document.getElementById('output_canvas');
+    const handCanvas = document.getElementById('hand_canvas');
+    const outputCtx = outputCanvas.getContext('2d');
+    const handCtx = handCanvas.getContext('2d');
 
-    async function setupCamera() {
-      video.width = window.innerWidth;
-      video.height = window.innerHeight;
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user' },
-        audio: false
-      });
-      video.srcObject = stream;
-
-      return new Promise(resolve => {
-        video.onloadedmetadata = () => {
-          resolve(video);
-        };
-      });
+    async function loadModel() {
+      model = await tmImage.load(URL + "model.json", URL + "metadata.json");
+      console.log("Model Loaded");
     }
 
-    async function main() {
-      await setupCamera();
-      video.play();
+    // Setup MediaPipe Hands
+    const hands = new Hands({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
 
-      const model = await handpose.load();
-      console.log("Handpose model loaded");
+    hands.setOptions({
+      maxNumHands: 1,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.7,
+      minTrackingConfidence: 0.5
+    });
 
-      async function detect() {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+    hands.onResults(onResults);
 
-        const predictions = await model.estimateHands(video, true);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Start webcam
+    const camera = new Camera(videoElement, {
+      onFrame: async () => {
+        await hands.send({image: videoElement});
+      },
+      width: 640,
+      height: 480
+    });
+    camera.start();
 
-        if (predictions.length > 0) {
-          const landmarks = predictions[0].landmarks;
+    function onResults(results) {
+      outputCtx.save();
+      outputCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+      outputCtx.drawImage(results.image, 0, 0, outputCanvas.width, outputCanvas.height);
 
-          // Draw points
-          for (let i = 0; i < landmarks.length; i++) {
-            const [x, y] = landmarks[i];
-            ctx.beginPath();
-            ctx.arc(x, y, 4, 0, 2 * Math.PI);
-            ctx.fillStyle = '#00FFFF';
-            ctx.fill();
-          }
+      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        const landmarks = results.multiHandLandmarks[0];
 
-          // Draw lines
-          for (const [start, end] of CONNECTED_POINTS) {
-            const [x1, y1] = landmarks[start];
-            const [x2, y2] = landmarks[end];
-
-            ctx.beginPath();
-            ctx.moveTo(x1, y1);
-            ctx.lineTo(x2, y2);
-            ctx.strokeStyle = '#FF00AA';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-          }
+        // Get bounding box
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const point of landmarks) {
+          minX = Math.min(minX, point.x);
+          minY = Math.min(minY, point.y);
+          maxX = Math.max(maxX, point.x);
+          maxY = Math.max(maxY, point.y);
         }
 
-        requestAnimationFrame(detect);
-      }
+        // Expand a bit around the hand
+        const offset = 0.1;
+        minX = Math.max(0, minX - offset);
+        minY = Math.max(0, minY - offset);
+        maxX = Math.min(1, maxX + offset);
+        maxY = Math.min(1, maxY + offset);
 
-      detect();
+        const x = minX * outputCanvas.width;
+        const y = minY * outputCanvas.height;
+        const width = (maxX - minX) * outputCanvas.width;
+        const height = (maxY - minY) * outputCanvas.height;
+
+        // Crop the hand
+        const handImage = outputCtx.getImageData(x, y, width, height);
+        handCanvas.width = 224;
+        handCanvas.height = 224;
+        handCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
+        handCtx.drawImage(
+          outputCanvas, 
+          x, y, width, height, 
+          0, 0, handCanvas.width, handCanvas.height
+        );
+
+        predictHand();
+      }
+      outputCtx.restore();
     }
 
-    main();
+    async function predictHand() {
+      const prediction = await model.predict(handCanvas);
+      console.log(prediction);
+    }
+
+    loadModel();
   </script>
 </body>
 </html>
