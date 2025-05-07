@@ -1,0 +1,89 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ASL Letter Classifier</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <style>
+    #webcam {
+      width: 640px; /* Set the size of the webcam */
+      height: 480px; /* Set the size of the webcam */
+      border: 2px solid black; /* Optional: border around the video */
+    }
+
+    #canvas {
+      border: 1px solid black;
+    }
+
+    /* Optional: For centering the content */
+    body {
+      text-align: center;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>ASL Letter Classifier</h1>
+  <video id="webcam" width="640" height="480" autoplay></video> <!-- Enlarge video -->
+  <div>
+    <canvas id="canvas" width="32" height="32" style="border:1px solid black;"></canvas>
+  </div>
+  <p id="prediction">Prediction: </p>
+
+  <script>
+    const letters = [
+      'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
+      'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
+      'U', 'V', 'W', 'X', 'Y', 'Z'
+    ];
+
+    let model;
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const webcam = document.getElementById('webcam');
+
+    // Function to start the webcam
+    async function startWebcam() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        webcam.srcObject = stream;
+        console.log('Webcam is working.');
+      } catch (error) {
+        console.error('Error accessing the webcam:', error);
+        alert('Please grant webcam access to continue.');
+      }
+    }
+
+    // Capture a frame from the webcam every 100ms
+    function captureFrame() {
+      ctx.drawImage(webcam, 0, 0, 32, 32); // Draw webcam feed onto the canvas
+      const input = tf.browser.fromPixels(canvas)
+        .toFloat()
+        .div(255.0)
+        .expandDims();
+
+      model.predict(input).data().then(data => {
+        const maxIdx = data.slice(0, 26).reduce((best, val, idx) => val > data[best] ? idx : best, 0); // limit to A–Z
+        const letter = letters[maxIdx];
+        const confidence = (data[maxIdx] * 100).toFixed(2);
+        document.getElementById('prediction').textContent = `Prediction: ${letter} (${confidence}%)`;
+
+        input.dispose();
+      });
+    }
+
+    // Start the webcam and load the model when the page is ready
+    window.onload = async () => {
+      try {
+        model = await tf.loadGraphModel('model/Model_tfjs/model.json'); // Path to the converted TensorFlow.js model
+        console.log('Model loaded successfully.');
+        startWebcam();
+        setInterval(captureFrame, 100); // Capture frame every 100ms
+      } catch (error) {
+        console.error('Error loading the model:', error);
+        alert('Model loading failed!');
+      }
+    };
+  </script>
+</body>
+</html>

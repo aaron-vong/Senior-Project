@@ -1,0 +1,11 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\libs",
+    "\\model",
+    "\\model\\Model3_tfjs",
+    "\\model\\Model_tfjs"
+  ],
+  "SelectedNode": "\\libs\\tf.min.js",
+  "PreviewInSolutionExplorer": false
+}
