@@ -1,39 +1,48 @@
-const URL = "model/";
+let model, webcam;
+const labels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split('').concat(['del', 'nothing', 'space']); // adjust if needed
 
-let model, webcam, labelContainer, maxPredictions;
-
-async function init() {
-  const modelURL = URL + "model.json";
-  const metadataURL = URL + "metadata.json";
-
-  // Load the model and metadata
-  model = await tmImage.load(modelURL, metadataURL);
-  maxPredictions = model.getTotalClasses();
-
-  // Setup webcam
-  const flip = true; // flip webcam for mirror view
-  webcam = new tmImage.Webcam(224, 224, flip);
-  await webcam.setup();
-  await webcam.play();
-  window.requestAnimationFrame(loop);
-
-  document.getElementById("webcam-container").appendChild(webcam.canvas);
-  labelContainer = document.getElementById("label-container");
-  for (let i = 0; i < maxPredictions; i++) {
-    labelContainer.appendChild(document.createElement("div"));
-  }
+async function loadModel() {
+  model = await tf.loadGraphModel('model/model.json');
+  console.log("✅ Model loaded");
+  setupWebcam();
 }
 
-async function loop() {
-  webcam.update();
-  await predict();
-  window.requestAnimationFrame(loop);
+async function setupWebcam() {
+  const video = document.createElement('video');
+  video.width = 200;
+  video.height = 200;
+  video.autoplay = true;
+
+  const webcamContainer = document.getElementById("webcam-container");
+  webcamContainer.innerHTML = '';
+  webcamContainer.appendChild(video);
+
+  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+  video.srcObject = stream;
+
+  video.addEventListener('loadeddata', () => {
+    setInterval(() => predict(video), 200);
+  });
 }
 
-async function predict() {
-  const prediction = await model.predict(webcam.canvas);
-  prediction.sort((a, b) => b.probability - a.probability);
-  const top = prediction[0];
-
-  labelContainer.innerHTML = `${top.className} (${(top.probability * 100).toFixed(1)}%)`;
+function preprocessImage(video) {
+  return tf.tidy(() => {
+    return tf.browser.fromPixels(video)
+      .resizeNearestNeighbor([200, 200])
+      .toFloat()
+      .div(255.0)
+      .expandDims(); // [1, 200, 200, 3]
+  });
 }
+
+async function predict(video) {
+  const input = preprocessImage(video);
+  const output = model.predict(input);
+  const classIndex = (await output.argMax(-1).data())[0];
+
+  const labelContainer = document.getElementById("label-container");
+  labelContainer.innerText = `Prediction: ${labels[classIndex]}`;
+}
+
+// Start everything
+loadModel();
