@@ -50,8 +50,12 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 3,
+          "SelectedChildIndex": 4,
           "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{1c64b9c2-e352-428e-a56d-0ace190b99a6}"
+            },
             {
               "$type": "Bookmark",
               "Name": "ST:1:0:{d212f56b-c48a-434c-a121-1c5d80b59b9f}"
@@ -70,8 +74,7 @@
               "RelativeToolTip": "andrew.py",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAAAlAAAAAAAAAA==",
               "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAHaSURBVDhPpZO/S1tRFMe/75pEVAwt4k\u002BklUrJUowSNDgEuii1gy0uHUqEQkPG/AUdHKRD3VwMWSPoYMBBUBwkhVIDjtqhpa2ZiqaUatIXk/vuOz33tSmpvleHXvgu937P53zf4Tzgfw4RGc31iUSC/sUTQjxOp9Obnh4NME3TVdlslrj4IJlMPmoGCDdaoVBAsxqeeDweCYfDL7jRg8adzw0QjUZdU\u002BZyOQSDwQg/asC2NrkCdPfmE5mYRGx6Fq1\u002BgRvtfuTz\u002BT/P1yZ48\u002BkMC5vvcFgsQdZrGO7uwMzMw1Amk3Eg187gc6kC25KwpIRiHR2foHtgcKARwRWgZ9A1PIq35R4UT8swYON2VxtD6g5oPPRthM7WFKnKc88ZrBc7UTz5DotjSy7U8XWxTuNXH4GL9wKib9FzBksH\u002B07HgCDMxzrQ2hIA2QpjtyyI2h6gfgDyS49ngnYfwaxILD8VCAV3fn8yL6plciFLsRCwPGcwda/fSdDbqY18bMmF579ksWyGtY3uuibQ/vnYHTy7fxe\u002B6hZQrnJHxVszCBh1YGhxgS011soVQCqV\u002BmuJVl7N2UKeCyc6M9By03k3DOOl67peviRSs1R\u002BfUxfV4lKqxdU/bDBf/GThu8nlzrss/UrmjEAAAAASUVORK5CYII=",
-              "WhenOpened": "2025-05-05T07:28:57.302Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-05-05T07:28:57.302Z"
             },
             {
               "$type": "Document",
@@ -79,9 +82,9 @@
               "Title": "andrew.html",
               "DocumentMoniker": "C:\\Users\\Andrew\\Documents\\Senior-Project\\andrew.html",
               "RelativeDocumentMoniker": "andrew.html",
-              "ToolTip": "C:\\Users\\Andrew\\Documents\\Senior-Project\\andrew.html",
-              "RelativeToolTip": "andrew.html",
-              "ViewState": "AgIAACUAAAAAQDMzMzPzv1UAAAAGAAAAAAAAAA==",
+              "ToolTip": "C:\\Users\\Andrew\\Documents\\Senior-Project\\andrew.html*",
+              "RelativeToolTip": "andrew.html*",
+              "ViewState": "AgIAACYAAACAMzMzM7MtwFUAAAAHAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
               "WhenOpened": "2025-05-05T06:33:41.475Z",
               "EditorCaption": ""
@@ -96,8 +99,7 @@
               "RelativeToolTip": "learntest.html",
               "ViewState": "AgIAAA8BAACgzMzMzAwswDIBAAAHAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
-              "WhenOpened": "2025-05-05T06:16:34.412Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-05-05T06:16:34.412Z"
             },
             {
               "$type": "Document",
@@ -109,8 +111,7 @@
               "RelativeToolTip": "app.py",
               "ViewState": "AgIAAAMAAAAAMzMzMzMrwB8AAAAqAAAAAAAAAA==",
               "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAHaSURBVDhPpZO/S1tRFMe/75pEVAwt4k\u002BklUrJUowSNDgEuii1gy0uHUqEQkPG/AUdHKRD3VwMWSPoYMBBUBwkhVIDjtqhpa2ZiqaUatIXk/vuOz33tSmpvleHXvgu937P53zf4Tzgfw4RGc31iUSC/sUTQjxOp9Obnh4NME3TVdlslrj4IJlMPmoGCDdaoVBAsxqeeDweCYfDL7jRg8adzw0QjUZdU\u002BZyOQSDwQg/asC2NrkCdPfmE5mYRGx6Fq1\u002BgRvtfuTz\u002BT/P1yZ48\u002BkMC5vvcFgsQdZrGO7uwMzMw1Amk3Eg187gc6kC25KwpIRiHR2foHtgcKARwRWgZ9A1PIq35R4UT8swYON2VxtD6g5oPPRthM7WFKnKc88ZrBc7UTz5DotjSy7U8XWxTuNXH4GL9wKib9FzBksH\u002B07HgCDMxzrQ2hIA2QpjtyyI2h6gfgDyS49ngnYfwaxILD8VCAV3fn8yL6plciFLsRCwPGcwda/fSdDbqY18bMmF579ksWyGtY3uuibQ/vnYHTy7fxe\u002B6hZQrnJHxVszCBh1YGhxgS011soVQCqV\u002BmuJVl7N2UKeCyc6M9By03k3DOOl67peviRSs1R\u002BfUxfV4lKqxdU/bDBf/GThu8nlzrss/UrmjEAAAAASUVORK5CYII=",
-              "WhenOpened": "2025-05-05T06:14:49.143Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-05-05T06:14:49.143Z"
             },
             {
               "$type": "Document",
@@ -122,8 +123,7 @@
               "RelativeToolTip": "quiz.html",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
-              "WhenOpened": "2025-05-05T06:12:35.528Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-05-05T06:12:35.528Z"
             },
             {
               "$type": "Document",
@@ -135,8 +135,7 @@
               "RelativeToolTip": "learnv2.html",
               "ViewState": "AgIAAKcAAAAAAAAAAAAgwOIAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
-              "WhenOpened": "2025-05-03T11:12:31.853Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-05-03T11:12:31.853Z"
             },
             {
               "$type": "Document",
@@ -148,8 +147,7 @@
               "RelativeToolTip": "index.html",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
-              "WhenOpened": "2025-05-03T11:12:23.343Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-05-03T11:12:23.343Z"
             },
             {
               "$type": "Document",
@@ -161,8 +159,7 @@
               "RelativeToolTip": "model\\model.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2025-05-03T11:12:19.733Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-05-03T11:12:19.733Z"
             },
             {
               "$type": "Document",
@@ -174,8 +171,7 @@
               "RelativeToolTip": "learn.html",
               "ViewState": "AgIAAIsAAAAAKDMzMzP7vwAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
-              "WhenOpened": "2025-05-03T11:12:05.983Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-05-03T11:12:05.983Z"
             },
             {
               "$type": "Document",
@@ -187,8 +183,7 @@
               "RelativeToolTip": "indextest.html",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAADAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
-              "WhenOpened": "2025-05-03T11:12:03.483Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-05-03T11:12:03.483Z"
             }
           ]
         }
