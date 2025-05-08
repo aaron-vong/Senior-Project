@@ -5,6 +5,8 @@
   <title>Learn the ASL Alphabet</title>
   <script src="libs/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
+
   <style>
     body {
       font-family: sans-serif;
@@ -92,103 +94,90 @@
   <div id="label-container"></div>
   <div id="feedback"></div>
 
-  <script>
-    let isTransitioning = false;
-    const letters = ["A", "B", "C", "D", "E"];
-    let currentIndex = 0;
-    let currentLetter = letters[currentIndex];
-    let model, video;
-    let holdStartTime = null;
-    const REQUIRED_HOLD_TIME = 500;
-    const REQUIRED_CONFIDENCE = 0.90;
-    const successSound = new Audio("success.mp3");
-    
-    const labelContainer = document.getElementById("label-container");
-    
-    async function init() {
-      model = await tf.loadGraphModel("model/model.json");
-      console.log("✅ Model loaded");
-    
-      video = document.createElement("video");
-      video.width = 200;
-      video.height = 200;
-      video.autoplay = true;
-    
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      video.srcObject = stream;
-    
-      document.getElementById("webcam-container").innerHTML = "";
-      document.getElementById("webcam-container").appendChild(video);
-    
-      updateLetter();
-      video.addEventListener("loadeddata", () => {
-        requestAnimationFrame(loop);
-      });
-    }
-    
-    function preprocessImage(videoElement) {
-      return tf.tidy(() => {
-        return tf.browser.fromPixels(videoElement)
-          .resizeNearestNeighbor([200, 200])
-          .toFloat()
-          .div(255.0)
-          .expandDims(); // shape: [1, 200, 200, 3]
-      });
-    }
-    
-    function updateLetter() {
-      currentLetter = letters[currentIndex];
-      document.getElementById("current-letter").innerText = `Learn Letter: ${currentLetter}`;
-      document.getElementById("feedback").innerText = "";
-      document.getElementById("asl-image").src = `images/${currentLetter}.jpg`;
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
+<script>
+  const letters = ["A", "B", "C", "D", "E"];
+  let currentIndex = 0;
+  let currentLetter = letters[currentIndex];
+  let model, webcam, labelContainer, maxPredictions;
+  let holdStartTime = null;
+  let isTransitioning = false;
+  const REQUIRED_HOLD_TIME = 500;
+  const REQUIRED_CONFIDENCE = 0.90;
+  const successSound = new Audio("success.mp3");
+
+  const URL = "model/"; // Make sure this is where your Teachable Machine model lives
+
+  async function init() {
+    const modelURL = URL + "model.json";
+    const metadataURL = URL + "metadata.json";
+
+    model = await tmImage.load(modelURL, metadataURL);
+    maxPredictions = model.getTotalClasses();
+
+    webcam = new tmImage.Webcam(200, 200, true); // width, height, flip
+    await webcam.setup();
+    await webcam.play();
+    window.requestAnimationFrame(loop);
+
+    document.getElementById("webcam-container").innerHTML = "";
+    document.getElementById("webcam-container").appendChild(webcam.canvas);
+
+    labelContainer = document.getElementById("label-container");
+
+    updateLetter();
+  }
+
+  function updateLetter() {
+    currentLetter = letters[currentIndex];
+    document.getElementById("current-letter").innerText = `Learn Letter: ${currentLetter}`;
+    document.getElementById("feedback").innerText = "";
+    document.getElementById("asl-image").src = `images/${currentLetter}.jpg`;
+    holdStartTime = null;
+  }
+
+  async function predict() {
+    const prediction = await model.predict(webcam.canvas);
+    const classPrediction = prediction.find(p => p.className === currentLetter);
+    const confidence = classPrediction?.probability || 0;
+
+    labelContainer.innerText = `Prediction: ${currentLetter} (${(confidence * 100).toFixed(1)}%)`;
+
+    const now = Date.now();
+
+    if (!isTransitioning && confidence >= REQUIRED_CONFIDENCE) {
+      if (!holdStartTime) {
+        holdStartTime = now;
+      } else if (now - holdStartTime >= REQUIRED_HOLD_TIME) {
+        document.getElementById("feedback").innerText = "✅ Correct!";
+        successSound.play();
+        isTransitioning = true;
+
+        setTimeout(() => {
+          currentIndex++;
+          if (currentIndex < letters.length) {
+            updateLetter();
+            isTransitioning = false;
+          } else {
+            document.getElementById("current-letter").innerText = "🎉 You've completed Learn Mode!";
+            document.getElementById("feedback").innerText = "";
+          }
+        }, 1000);
+      }
+    } else {
       holdStartTime = null;
     }
-    
-    async function predict() {
-      const input = preprocessImage(video);
-      const prediction = model.predict(input);
-      const classIndex = (await prediction.argMax(-1).data())[0];
-      const classProb = (await prediction.max().data())[0];
-    
-      labelContainer.innerText = `Prediction: ${letters[classIndex]} (${(classProb * 100).toFixed(1)}%)`;
-    
-      const now = Date.now();
-    
-      if (
-        !isTransitioning &&
-        letters[classIndex] === currentLetter &&
-        classProb >= REQUIRED_CONFIDENCE
-      ) {
-        if (!holdStartTime) {
-          holdStartTime = now;
-        } else if (now - holdStartTime >= REQUIRED_HOLD_TIME) {
-          document.getElementById("feedback").innerText = "✅ Correct!";
-          successSound.play();
-          isTransitioning = true;
-    
-          setTimeout(() => {
-            currentIndex++;
-            if (currentIndex < letters.length) {
-              updateLetter();
-              isTransitioning = false;
-            } else {
-              document.getElementById("current-letter").innerText = "🎉 You've completed Learn Mode!";
-              document.getElementById("feedback").innerText = "";
-            }
-          }, 1000);
-        }
-      } else {
-        holdStartTime = null;
-      }
-    }
-    
-    async function loop() {
-      await predict();
-      requestAnimationFrame(loop);
-    }
-    
-    init();
-    </script>
+  }
+
+  async function loop() {
+    webcam.update();
+    await predict();
+    requestAnimationFrame(loop);
+  }
+
+  init();
+</script>
+
     
   <div class="mt-12 text-center">
     <button class="button" onclick="window.history.back()">Back</button>
