@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Learn the ASL Alphabet</title>
+  <script src="libs/tf.min.js"></script>
+  <script src="libs/teachablemachine-image.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      background-color: #5F9EA0;
+      color: #FFEFD5;
+      text-align: center;
+      margin: 0;
+      padding: 30px;
+    }
+
+    h1 {
+      margin-bottom: 0;
+    }
+
+    .subtitle {
+      margin-top: 0;
+      font-size: 1.1em;
+    }
+
+    .row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 60px;
+      margin-top: 30px;
+      flex-wrap: wrap;
+    }
+
+    .box {
+      background: rgb(17, 132, 134);
+      padding: 5px;
+      border-radius: 5px;
+    }
+
+    #asl-image {
+      width: 300px;
+      height: auto;
+    }
+
+    #webcam-container video {
+      border-radius: 5px;
+      transform: scaleX(1); /* Not mirrored */
+    }
+
+    canvas {
+      display: none;
+    }
+
+    .button {
+      background-color: #F08080;
+      color: #FFEFD5;
+      padding: 15px 30px;
+      border: none;
+      border-radius: 50px;
+      font-size: 1.2em;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      margin-top: 20px;
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .button:hover {
+      background-color: #f0f0f0;
+      color: black;
+    }
+
+    #label-container {
+      font-size: 1.2em;
+      margin-top: 10px;
+    }
+
+    #feedback {
+      font-size: 1.8em;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Learn the ASL Alphabet</h1>
+  <p class="subtitle">Use your hands to learn the American Sign Language alphabet. Perform a gesture, and we will recognize it!</p>
+  <h2 id="current-letter">Learn Letter: A</h2>
+
+  <div class="row">
+    <div class="box">
+      <img id="asl-image" src="images/A.jpg" alt="Sign for letter A">
+    </div>
+    <div class="box" id="webcam-container">
+      <video id="video" width="500" height="450" autoplay muted playsinline></video>
+      <canvas id="handCanvas" width="224" height="224"></canvas>
+    </div>
+  </div>
+
+  <div id="label-container"></div>
+  <div id="feedback"></div>
+
+  <div class="mt-12 text-center">
+    <button class="button" onclick="window.history.back()">Back</button>
+  </div>
+
+  <script>
+    const letters = ["A", "B", "C", "D", "E"];
+    let currentIndex = 0;
+    let currentLetter = letters[currentIndex];
+    let isTransitioning = false;
+    let holdStartTime = null;
+    const REQUIRED_HOLD_TIME = 500;
+    const REQUIRED_CONFIDENCE = 0.90;
+
+    let model, labelContainer;
+    const successSound = new Audio("success.mp3");
+
+    const videoElement = document.getElementById("video");
+    const handCanvas = document.getElementById("handCanvas");
+    const handCtx = handCanvas.getContext("2d");
+
+    const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+    hands.setOptions({
+      maxNumHands: 1,
+      minDetectionConfidence: 0.7,
+      minTrackingConfidence: 0.7
+    });
+
+    hands.onResults(onResults);
+
+    const camera = new Camera(videoElement, {
+      onFrame: async () => {
+        await hands.send({image: videoElement});
+      },
+      width: 500,
+      height: 450
+    });
+
+    async function onResults(results) {
+      if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) return;
+
+      const landmarks = results.multiHandLandmarks[0];
+
+      // Get bounding box around the hand
+      const xs = landmarks.map(l => l.x);
+      const ys = landmarks.map(l => l.y);
+      const minX = Math.min(...xs);
+      const maxX = Math.max(...xs);
+      const minY = Math.min(...ys);
+      const maxY = Math.max(...ys);
+
+      const vidWidth = videoElement.videoWidth;
+      const vidHeight = videoElement.videoHeight;
+
+      const margin = 0.1; // Add a little extra space
+      const x = Math.max(0, minX - margin) * vidWidth;
+      const y = Math.max(0, minY - margin) * vidHeight;
+      const width = Math.min(1, maxX + margin) * vidWidth - x;
+      const height = Math.min(1, maxY + margin) * vidHeight - y;
+
+      // Draw cropped hand to canvas for prediction
+      handCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
+      handCtx.drawImage(videoElement, x, y, width, height, 0, 0, handCanvas.width, handCanvas.height);
+
+      predict(handCanvas);
+    }
+
+    async function predict(inputCanvas) {
+      const prediction = await model.predict(inputCanvas);
+      prediction.sort((a, b) => b.probability - a.probability);
+      const top = prediction[0];
+      labelContainer.innerText = `Prediction: ${top.className} (${(top.probability * 100).toFixed(1)}%)`;
+
+      const now = Date.now();
+      if (!isTransitioning && top.className === currentLetter && top.probability >= REQUIRED_CONFIDENCE) {
+        if (!holdStartTime) {
+          holdStartTime = now;
+        } else if (now - holdStartTime >= REQUIRED_HOLD_TIME) {
+          document.getElementById("feedback").innerText = "✅ Correct!";
+          successSound.play();
+          isTransitioning = true;
+
+          setTimeout(() => {
+            currentIndex++;
+            if (currentIndex < letters.length) {
+              updateLetter();
+              isTransitioning = false;
+            } else {
+              document.getElementById("current-letter").innerText = "🎉 You've completed Learn Mode!";
+              document.getElementById("feedback").innerText = "";
+            }
+          }, 1000);
+        }
+      } else {
+        holdStartTime = null;
+      }
+    }
+
+    function updateLetter() {
+      currentLetter = letters[currentIndex];
+      document.getElementById("current-letter").innerText = `Learn Letter: ${currentLetter}`;
+      document.getElementById("feedback").innerText = "";
+      document.getElementById("asl-image").src = `images/${currentLetter}.jpg`;
+      holdStartTime = null;
+    }
+
+    async function init() {
+      try {
+        model = await tmImage.load("model/model.json", "model/metadata.json");
+      } catch (err) {
+        console.error("Model load failed:", err);
+        document.getElementById("label-container").innerText = "❌ Model failed to load.";
+        return;
+      }
+      labelContainer = document.getElementById("label-container");
+      updateLetter();
+      camera.start();
+    }
+
+    init();
+  </script>
+</body>
+</html>
