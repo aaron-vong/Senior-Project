@@ -1,36 +1,32 @@
-from flask import Flask, jsonify
-import cv2
-import numpy as np
-import tensorflow as tf
+from flask import Flask, request, jsonify, render_template
+from inference_sdk import InferenceHTTPClient
+import base64
+import os
 
-# Load model and labels
-model = tf.keras.models.load_model("keras_model.h5")
-with open("labels.txt", "r") as f:
-    labels = [line.strip() for line in f.readlines()]
+app = Flask(__name__, static_url_path='', static_folder='.', template_folder='.')
 
-app = Flask(__name__)
-cap = cv2.VideoCapture(0)  # make sure webcam index is 0
+client = InferenceHTTPClient(
+    api_url="https://serverless.roboflow.com",
+    api_key="Co4G0VLFnqzAKJal6i0C"
+)
 
-@app.route("/predict", methods=["GET"])
+@app.route('/')
+def home():
+    return render_template('learn.html')  # Launch from here
+
+@app.route('/predict', methods=['POST'])
 def predict():
-    ret, frame = cap.read()
-    if not ret:
-        return jsonify({'error': 'Could not access webcam'})
+    data = request.get_json()
+    image_data = data['image'].split(",")[1]
+    image_bytes = base64.b64decode(image_data)
 
-    # Resize and normalize image for Teachable Machine model
-    img = cv2.resize(frame, (224, 224))
-    img = np.asarray(img, dtype=np.float32).reshape(1, 224, 224, 3)
-    img = (img / 127.5) - 1
+    with open("temp.jpg", "wb") as f:
+        f.write(image_bytes)
 
-    prediction = model.predict(img)
-    index = np.argmax(prediction)
-    class_name = labels[index]
-    confidence = float(prediction[0][index])
+    result = client.infer("temp.jpg", model_id="american-sign-language-letters-gxpdm/4")
+    os.remove("temp.jpg")
 
-    return jsonify({
-        'letter': class_name,
-        'confidence': round(confidence, 2)
-    })
+    return jsonify(result)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True)

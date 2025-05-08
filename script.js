@@ -1,39 +1,80 @@
-const URL = "model/";
-
-let model, webcam, labelContainer, maxPredictions;
+const video = document.createElement("video");
+const canvas = document.createElement("canvas");
+canvas.width = 224;
+canvas.height = 224;
+const context = canvas.getContext("2d");
+let labelContainer;
 
 async function init() {
-  const modelURL = URL + "model.json";
-  const metadataURL = URL + "metadata.json";
+  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+  video.srcObject = stream;
+  video.width = 224;
+  video.height = 224;
+  video.autoplay = true;
 
-  // Load the model and metadata
-  model = await tmImage.load(modelURL, metadataURL);
-  maxPredictions = model.getTotalClasses();
-
-  // Setup webcam
-  const flip = true; // flip webcam for mirror view
-  webcam = new tmImage.Webcam(224, 224, flip);
-  await webcam.setup();
-  await webcam.play();
-  window.requestAnimationFrame(loop);
-
-  document.getElementById("webcam-container").appendChild(webcam.canvas);
+  document.getElementById("webcam-container").appendChild(video);
   labelContainer = document.getElementById("label-container");
-  for (let i = 0; i < maxPredictions; i++) {
-    labelContainer.appendChild(document.createElement("div"));
-  }
+
+  video.addEventListener("loadeddata", () => {
+    window.requestAnimationFrame(loop);
+  });
 }
 
 async function loop() {
-  webcam.update();
+  context.drawImage(video, 0, 0, canvas.width, canvas.height);
   await predict();
   window.requestAnimationFrame(loop);
 }
 
 async function predict() {
-  const prediction = await model.predict(webcam.canvas);
-  prediction.sort((a, b) => b.probability - a.probability);
-  const top = prediction[0];
+  const imageData = canvas.toDataURL("image/jpeg");
 
-  labelContainer.innerHTML = `${top.className} (${(top.probability * 100).toFixed(1)}%)`;
+  try {
+    const response = await fetch("/predict", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: imageData }),
+    });
+
+    const result = await response.json();
+    const predictions = result.predictions;
+
+    // Clear canvas
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    if (predictions && predictions.length > 0) {
+      predictions.forEach((pred) => {
+        // Draw bounding box
+        context.strokeStyle = "#00FF00";
+        context.lineWidth = 2;
+        context.strokeRect(
+          pred.x - pred.width / 2,
+          pred.y - pred.height / 2,
+          pred.width,
+          pred.height
+        );
+
+        // Draw label
+        context.fillStyle = "#00FF00";
+        context.font = "16px Arial";
+        context.fillText(
+          `${pred.class} (${(pred.confidence * 100).toFixed(1)}%)`,
+          pred.x - pred.width / 2,
+          pred.y - pred.height / 2 - 5
+        );
+      });
+
+      const top = predictions.sort((a, b) => b.confidence - a.confidence)[0];
+      labelContainer.innerHTML = `${top.class} (${(top.confidence * 100).toFixed(1)}%)`;
+    } else {
+      labelContainer.innerHTML = "No hand detected";
+    }
+  } catch (error) {
+    console.error("Prediction error:", error);
+    labelContainer.innerHTML = "Prediction error";
+  }
 }
+
+
+init();

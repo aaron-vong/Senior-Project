@@ -3,8 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <title>Learn the ASL Alphabet</title>
-  <script src="libs/tf.min.js"></script>
-  <script src="libs/teachablemachine-image.min.js"></script>
   <style>
     body {
       font-family: sans-serif;
@@ -44,8 +42,10 @@
       height: auto;
     }
 
-    #webcam-container canvas {
+    #webcam-container canvas,
+    video {
       border-radius: 5px;
+      border: 2px solid #FFEFD5;
     }
 
     .button {
@@ -62,9 +62,9 @@
     }
 
     .button:hover {
-            background-color: #f0f0f0;
-            color: black;
-        }
+      background-color: #f0f0f0;
+      color: black;
+    }
 
     #label-container {
       font-size: 1.2em;
@@ -86,105 +86,115 @@
     <div class="box">
       <img id="asl-image" src="images/A.jpg" alt="Sign for letter A">
     </div>
-    <div class="box" id="webcam-container"></div>
+    <div class="box">
+      <video id="video" width="224" height="224" autoplay></video>
+      <canvas id="canvas" width="224" height="224" style="display: none;"></canvas>
+    </div>
   </div>
 
-  <div id="label-container"></div>
+  <div id="label-container">Loading webcam...</div>
   <div id="feedback"></div>
 
+  <audio id="success-sound" src="success.mp3" preload="auto"></audio>
+
   <script>
-    let isTransitioning = false;
-    const letters = ["A", "B", "C", "D", "E"]; // Limit to trained letters for now
-    let currentIndex = 0;
-    let currentLetter = letters[currentIndex];
-    let model, webcam, labelContainer;
-  
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const context = canvas.getContext("2d");
+    const labelContainer = document.getElementById("label-container");
+    const successSound = document.getElementById("success-sound");
+
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split('');
+    let targetLetterIndex = 0;
     let holdStartTime = null;
-    const REQUIRED_HOLD_TIME = 500; // milliseconds
-    const REQUIRED_CONFIDENCE = 0.90;
-  
-    const successSound = new Audio("success.mp3"); // Place this file in the same folder as your HTML
-  
+    const requiredHoldDuration = 2000; // ms
+
     async function init() {
-      const modelURL = "model/model.json";
-      const metadataURL = "model/metadata.json";
-  
-      // Model Loading
       try {
-        model = await tmImage.load(modelURL, metadataURL);
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+
+        video.addEventListener("loadeddata", () => {
+          requestAnimationFrame(loop);
+        });
       } catch (err) {
-        console.error("Model load failed:", err);
-        document.getElementById("label-container").innerText = "❌ Model failed to load.";
-        return;
+        labelContainer.innerText = "❌ Webcam access denied.";
+        console.error(err);
       }
-  
-      webcam = new tmImage.Webcam(500, 450, true);
-      await webcam.setup();
-      await webcam.play();
-      document.getElementById("webcam-container").appendChild(webcam.canvas);
-      labelContainer = document.getElementById("label-container");
-  
-      updateLetter();
-      window.requestAnimationFrame(loop);
     }
-  
-    function updateLetter() {
-      currentLetter = letters[currentIndex];
-      document.getElementById("current-letter").innerText = `Learn Letter: ${currentLetter}`;
-      document.getElementById("feedback").innerText = "";
-      document.getElementById("asl-image").src = `images/${currentLetter}.jpg`;
-      holdStartTime = null;
-    }
-  
+
     async function loop() {
-      webcam.update();
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
       await predict();
-      window.requestAnimationFrame(loop);
+      requestAnimationFrame(loop);
     }
-  
-  async function predict() {
-  const prediction = await model.predict(webcam.canvas);
-  prediction.sort((a, b) => b.probability - a.probability);
-  const top = prediction[0];
-  labelContainer.innerText = `Prediction: ${top.className} (${(top.probability * 100).toFixed(1)}%)`;
 
-  const now = Date.now();
+    async function predict() {
+      const imageData = canvas.toDataURL("image/jpeg");
 
-  if (
-    !isTransitioning &&
-    top.className === currentLetter &&
-    top.probability >= REQUIRED_CONFIDENCE
-  ) {
-    if (!holdStartTime) {
-      holdStartTime = now;
-    } else if (now - holdStartTime >= REQUIRED_HOLD_TIME) {
-      document.getElementById("feedback").innerText = "✅ Correct!";
+      try {
+        const response = await fetch("/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: imageData }),
+        });
+
+        const result = await response.json();
+        const predictions = result.predictions;
+
+        if (predictions && predictions.length > 0) {
+          const top = predictions.sort((a, b) => b.confidence - a.confidence)[0];
+          const detected = top.class;
+
+          document.getElementById("current-letter").innerText = `Learn Letter: ${letters[targetLetterIndex]}`;
+          document.getElementById("asl-image").src = `images/${letters[targetLetterIndex]}.jpg`;
+          labelContainer.innerHTML = `🎯 Target: ${letters[targetLetterIndex]}<br>✋ Detected: ${detected}`;
+
+          if (detected === letters[targetLetterIndex]) {
+            if (!holdStartTime) {
+              holdStartTime = Date.now();
+            } else {
+              const heldTime = Date.now() - holdStartTime;
+              if (heldTime >= requiredHoldDuration) {
+                goToNextLetter();
+              }
+            }
+          } else {
+            holdStartTime = null;
+          }
+        } else {
+          labelContainer.innerHTML = `🎯 Target: ${letters[targetLetterIndex]}<br>⚠️ No hand detected`;
+          holdStartTime = null;
+        }
+      } catch (error) {
+        console.error("Prediction error:", error);
+        labelContainer.innerText = "❌ Error during prediction.";
+      }
+    }
+
+    function goToNextLetter() {
+      holdStartTime = null;
+      successSound.currentTime = 0;
       successSound.play();
 
-      isTransitioning = true; // prevent more transitions
-
-      setTimeout(() => {
-        currentIndex++;
-        if (currentIndex < letters.length) {
-          updateLetter();
-          isTransitioning = false; // allow next transition
-        } else {
-          document.getElementById("current-letter").innerText = "🎉 You've completed Learn Mode!";
+      targetLetterIndex++;
+      if (targetLetterIndex >= letters.length) {
+        labelContainer.innerHTML = "🎉 All letters complete!";
+        document.getElementById("feedback").innerText = "";
+        video.pause();
+      } else {
+        document.getElementById("feedback").innerText = "✅ Correct!";
+        setTimeout(() => {
           document.getElementById("feedback").innerText = "";
-        }
-      }, 1000);
+        }, 1500);
+      }
     }
-  } else {
-    holdStartTime = null;
-  }
-}
 
-  
     init();
   </script>
+
   <div class="mt-12 text-center">
     <button class="button" onclick="window.history.back()">Back</button>
   </div>
-
 </body>
 </html>
