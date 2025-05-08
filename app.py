@@ -3,30 +3,54 @@ from inference_sdk import InferenceHTTPClient
 import base64
 import os
 
-app = Flask(__name__, static_url_path='', static_folder='.', template_folder='.')
+app = Flask(__name__)
+
+# Load API key from environment or hardcode it temporarily (but NOT for production)
+ROBOFLOW_API_KEY = os.getenv("ROBOFLOW_API_KEY", "Co4G0VLFnqzAKJal6i0C")
 
 client = InferenceHTTPClient(
     api_url="https://serverless.roboflow.com",
-    api_key="Co4G0VLFnqzAKJal6i0C"
+    api_key=ROBOFLOW_API_KEY
 )
 
 @app.route('/')
 def home():
-    return render_template('learn.html')  # Launch from here
+    return render_template('index.html')
+
+@app.route('/learn')
+def learn():
+    return render_template('learn.html')
+
+@app.route('/quiz')
+def quiz():
+    return render_template('quiz.html')
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    data = request.get_json()
-    image_data = data['image'].split(",")[1]
-    image_bytes = base64.b64decode(image_data)
+    try:
+        data = request.get_json()
 
-    with open("temp.jpg", "wb") as f:
-        f.write(image_bytes)
+        if 'image' not in data:
+            return jsonify({'error': 'No image provided'}), 400
 
-    result = client.infer("temp.jpg", model_id="american-sign-language-letters-gxpdm/4")
-    os.remove("temp.jpg")
+        image_data = data['image'].split(",")[1]
+        image_bytes = base64.b64decode(image_data)
 
-    return jsonify(result)
+        # Save image temporarily
+        temp_image_path = "temp.jpg"
+        with open(temp_image_path, "wb") as f:
+            f.write(image_bytes)
+
+        # Perform inference
+        result = client.infer(temp_image_path, model_id="american-sign-language-letters-gxpdm/4")
+
+        # Clean up
+        os.remove(temp_image_path)
+
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

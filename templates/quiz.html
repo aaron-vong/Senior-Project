@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASL Quiz</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}"/>
+</head>
+<body>
+    <h1>ASL Quiz</h1>
+    <p>Perform the sign for the letter shown.</p>
+
+    <div class="container">
+        <div class="letter-container">
+            <h2>Sign the Letter:</h2>
+            <img id="letterImage" class="letter-image">
+        </div>
+
+        <div class="video-container">
+            <video id="videoElement" autoplay></video>
+        </div>
+    </div>
+
+    <p id="gestureOutput">Perform the gesture to answer the quiz!</p>
+    <div id="quizResult"></div>
+
+    <button class="button" onclick="window.history.back()">Back</button>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose"></script>
+    <script>
+        const videoElement = document.getElementById("videoElement");
+        const gestureOutput = document.getElementById("gestureOutput");
+        const letterImage = document.getElementById("letterImage");
+
+        async function setupWebcam() {
+            const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            videoElement.srcObject = videoStream;
+        }
+
+        async function loadHandposeModel() {
+            const model = await handpose.load();
+            startQuiz(model);
+        }
+
+        async function startQuiz(model) {
+            await setupWebcam();
+            loadNextLetter(model);
+        }
+
+        async function loadNextLetter(model) {
+            // Randomly pick a letter from the alphabet
+        }
+
+        loadHandposeModel();
+    </script>
+</body>
+</html>

@@ -6,18 +6,23 @@ const context = canvas.getContext("2d");
 let labelContainer;
 
 async function init() {
-  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-  video.srcObject = stream;
-  video.width = 224;
-  video.height = 224;
-  video.autoplay = true;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
+    video.width = 224;
+    video.height = 224;
+    video.autoplay = true;
 
-  document.getElementById("webcam-container").appendChild(video);
-  labelContainer = document.getElementById("label-container");
+    document.getElementById("webcam-container")?.appendChild(video);
+    labelContainer = document.getElementById("label-container");
 
-  video.addEventListener("loadeddata", () => {
-    window.requestAnimationFrame(loop);
-  });
+    video.addEventListener("loadeddata", () => {
+      window.requestAnimationFrame(loop);
+    });
+  } catch (error) {
+    console.error("Error accessing webcam:", error);
+    labelContainer.innerHTML = "Error accessing webcam";
+  }
 }
 
 async function loop() {
@@ -45,28 +50,12 @@ async function predict() {
 
     if (predictions && predictions.length > 0) {
       predictions.forEach((pred) => {
-        // Draw bounding box
-        context.strokeStyle = "#00FF00";
-        context.lineWidth = 2;
-        context.strokeRect(
-          pred.x - pred.width / 2,
-          pred.y - pred.height / 2,
-          pred.width,
-          pred.height
-        );
-
-        // Draw label
-        context.fillStyle = "#00FF00";
-        context.font = "16px Arial";
-        context.fillText(
-          `${pred.class} (${(pred.confidence * 100).toFixed(1)}%)`,
-          pred.x - pred.width / 2,
-          pred.y - pred.height / 2 - 5
-        );
+        drawBoundingBox(pred);
+        drawLabel(pred);
       });
 
-      const top = predictions.sort((a, b) => b.confidence - a.confidence)[0];
-      labelContainer.innerHTML = `${top.class} (${(top.confidence * 100).toFixed(1)}%)`;
+      const topPrediction = predictions.sort((a, b) => b.confidence - a.confidence)[0];
+      labelContainer.innerHTML = `${topPrediction.class} (${(topPrediction.confidence * 100).toFixed(1)}%)`;
     } else {
       labelContainer.innerHTML = "No hand detected";
     }
@@ -76,5 +65,25 @@ async function predict() {
   }
 }
 
+function drawBoundingBox(pred) {
+  context.strokeStyle = "#00FF00";
+  context.lineWidth = 2;
+  context.strokeRect(
+    pred.x - pred.width / 2,
+    pred.y - pred.height / 2,
+    pred.width,
+    pred.height
+  );
+}
+
+function drawLabel(pred) {
+  context.fillStyle = "#00FF00";
+  context.font = "16px Arial";
+  context.fillText(
+    `${pred.class} (${(pred.confidence * 100).toFixed(1)}%)`,
+    pred.x - pred.width / 2,
+    pred.y - pred.height / 2 - 5
+  );
+}
 
 init();

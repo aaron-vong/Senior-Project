@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SignFlow</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}"/>
+</head>
+<body>
+  <div class="container" id="mainContent">
+    <h1>Sign<span class="cursive">Flow</span></h1>
+    <p>Learn the ABC in American Sign Language</p>
+    <p>With machine learning</p>
+    <button class="button" id="startButton">Start</button>
+    <p>The purpose of this website is to teach the ASL alphabet.</p>
+  </div>
+
+  <div id="modeButtons" style="display: none; flex-direction: column; gap: 20px;">
+    <button class="button" onclick="location.href='/learn'">Learn</button>
+    <button class="button" onclick="location.href='/quiz'">Quiz</button>
+  </div>
+
+  <script>
+    document.getElementById("startButton").addEventListener("click", function () {
+      document.getElementById("mainContent").style.display = "none";
+      const modeButtons = document.getElementById("modeButtons");
+      modeButtons.style.display = "flex";
+      modeButtons.style.opacity = "1";
+    });
+  </script>
+</body>
+</html>
