@@ -1,58 +1,192 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ASL Quiz</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}"/>
+  <meta charset="UTF-8" />
+  <title>Learn ASL</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+  <style>
+    /* Style to adjust the video size */
+    video {
+      width: 100%;
+      max-width: 800px;
+      height: auto;
+    }
+
+    /* Ensure the container supports the increased video size */
+    .box {
+      max-width: 100%;
+      text-align: center;
+    }
+
+    /* Optional: Adjust canvas size */
+    canvas {
+      display: none;
+    }
+  </style>
 </head>
 <body>
-    <h1>ASL Quiz</h1>
-    <p>Perform the sign for the letter shown.</p>
+  <main>
+    <header>
+      <h1>Learn the ASL Alphabet</h1>
+      <p class="subtitle">Use your hands to learn the ASL alphabet. Perform a gesture, and we'll recognize it!</p>
+    </header>
 
-    <div class="container">
-        <div class="letter-container">
-            <h2>Sign the Letter:</h2>
-            <img id="letterImage" class="letter-image">
+    <section>
+      <h2 id="current-letter">Quiz Letter: A</h2>
+
+      <div class="row">
+        <img id="asl-image" src="{{ url_for('static', filename='images/A.jpg') }}" alt="Sign for A">
+
+        <div class="box">
+          <video id="video" autoplay muted playsinline></video>
+          <canvas id="canvas" width="640" height="480" style="display: none;"></canvas>
         </div>
+      </div>
 
-        <div class="video-container">
-            <video id="videoElement" autoplay></video>
-        </div>
-    </div>
+      <div id="label-container">Loading webcam...</div>
+      <div id="feedback"></div>
 
-    <p id="gestureOutput">Perform the gesture to answer the quiz!</p>
-    <div id="quizResult"></div>
+      <audio id="success-sound" src="{{ url_for('static', filename='success.mp3') }}" preload="auto"></audio>
 
-    <button class="button" onclick="window.history.back()">Back</button>
+      <div class="mt-12 text-center">
+        <button class="button" onclick="window.history.back()">Back</button>
+      </div>
+    </section>
+  </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose"></script>
-    <script>
-        const videoElement = document.getElementById("videoElement");
-        const gestureOutput = document.getElementById("gestureOutput");
-        const letterImage = document.getElementById("letterImage");
-
-        async function setupWebcam() {
-            const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
-            videoElement.srcObject = videoStream;
+  <script>
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const context = canvas.getContext("2d");
+    const labelContainer = document.getElementById("label-container");
+    const successSound = document.getElementById("success-sound");
+    const currentLetterHeader = document.getElementById("current-letter");
+    const aslImage = document.getElementById("asl-image");
+    const nextButton = document.getElementById("next-button");
+  
+    const originalLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split('');
+    let quizLetters = [...originalLetters];
+    let targetLetterIndex = 0;
+    let holdStartTime = null;
+  
+    // Shuffle the quizLetters once at start
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+  
+    async function init() {
+      shuffle(quizLetters);
+  
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        video.addEventListener("loadeddata", () => requestAnimationFrame(loop));
+        updateLetterDisplay();
+      } catch (err) {
+        labelContainer.innerText = "❌ Webcam access denied.";
+      }
+    }
+  
+    async function loop() {
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      await predict();
+      requestAnimationFrame(loop);
+    }
+  
+    async function predict() {
+      const imageData = canvas.toDataURL("image/jpeg");
+  
+      try {
+        const response = await fetch("/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: imageData }),
+        });
+  
+        const result = await response.json();
+        const predictions = result.predictions;
+  
+        if (predictions?.length) {
+          const top = predictions.sort((a, b) => b.confidence - a.confidence)[0];
+          const detected = top.class;
+  
+          labelContainer.innerHTML = `🎯 Target: ${quizLetters[targetLetterIndex]}<br>✋ Detected: ${detected}`;
+  
+          if (detected === quizLetters[targetLetterIndex]) {
+            if (!holdStartTime) {
+              holdStartTime = Date.now();
+            } else if (Date.now() - holdStartTime >= 500) {
+              feedback("correct");
+              goToNextLetter();
+            }
+          } else {
+            holdStartTime = null;
+            feedback("");
+          }
+        } else {
+          labelContainer.innerHTML = `🎯 Target: ${quizLetters[targetLetterIndex]}<br>⚠️ No hand detected`;
+          holdStartTime = null;
         }
-
-        async function loadHandposeModel() {
-            const model = await handpose.load();
-            startQuiz(model);
-        }
-
-        async function startQuiz(model) {
-            await setupWebcam();
-            loadNextLetter(model);
-        }
-
-        async function loadNextLetter(model) {
-            // Randomly pick a letter from the alphabet
-        }
-
-        loadHandposeModel();
-    </script>
+      } catch (error) {
+        labelContainer.innerText = "❌ Prediction error.";
+      }
+    }
+  
+    function updateLetterDisplay() {
+      const letter = quizLetters[targetLetterIndex];
+      currentLetterHeader.innerText = `Quiz Letter: ${letter}`;
+      aslImage.src = `/static/quiz_images/${letter}.jpg`;
+      aslImage.alt = `Letter ${letter}`;
+    }
+  
+    function goToNextLetter() {
+      holdStartTime = null;
+      successSound.currentTime = 0;
+      successSound.play();
+      targetLetterIndex++;
+      handleLetterChange();
+    }
+  
+    function handleNextClick() {
+      if (targetLetterIndex >= quizLetters.length) {
+        quizLetters = [...originalLetters];
+        shuffle(quizLetters);
+        targetLetterIndex = 0;
+        video.play();
+        nextButton.innerText = "Next";
+        updateLetterDisplay();
+        labelContainer.innerText = `🎯 Target: ${quizLetters[targetLetterIndex]}`;
+        feedback("");
+      } else {
+        targetLetterIndex++;
+        handleLetterChange();
+      }
+    }
+  
+    function handleLetterChange() {
+      if (targetLetterIndex < quizLetters.length) {
+        updateLetterDisplay();
+        labelContainer.innerText = `🎯 Target: ${quizLetters[targetLetterIndex]}`;
+        feedback("");
+      } else {
+        labelContainer.innerHTML = "🎉 Quiz complete!";
+        currentLetterHeader.innerText = `Well done!`;
+        aslImage.src = "/static/images/done.jpg";
+        aslImage.alt = "All signs complete";
+        video.pause();
+        nextButton.innerText = "Restart Quiz";
+      }
+    }
+  
+    function feedback(status) {
+      const feedbackContainer = document.getElementById("feedback");
+      feedbackContainer.innerHTML = status === "correct" ? '<span class="check-mark">✔️ Correct!</span>' : "";
+    }
+  
+    init();
+  </script>  
 </body>
 </html>
