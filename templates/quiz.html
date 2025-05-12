@@ -5,26 +5,24 @@
   <title>Learn ASL</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
   <style>
-    /* Style to adjust the video size */
     video {
       width: 100%;
       max-width: 800px;
       height: auto;
     }
 
-    /* Ensure the container supports the increased video size */
     .box {
       max-width: 100%;
       text-align: center;
     }
 
-    /* Optional: Adjust canvas size */
     canvas {
       display: none;
     }
 
-    .button{
+    .button {
       background-color: #dc8585;
+      margin: 0 5px;
     }
   </style>
 </head>
@@ -54,6 +52,7 @@
 
       <div class="mt-12 text-center">
         <button class="button" onclick="window.history.back()">Back</button>
+        <button class="button" id="next-button" onclick="handleNextClick()">Next</button>
       </div>
     </section>
   </main>
@@ -67,23 +66,22 @@
     const currentLetterHeader = document.getElementById("current-letter");
     const aslImage = document.getElementById("asl-image");
     const nextButton = document.getElementById("next-button");
-  
+
     const originalLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split('');
     let quizLetters = [...originalLetters];
     let targetLetterIndex = 0;
     let holdStartTime = null;
-  
-    // Shuffle the quizLetters once at start
+
     function shuffle(array) {
       for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [array[i], array[j]] = [array[j], array[i]];
       }
     }
-  
+
     async function init() {
       shuffle(quizLetters);
-  
+
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         video.srcObject = stream;
@@ -93,32 +91,32 @@
         labelContainer.innerText = "❌ Webcam access denied.";
       }
     }
-  
+
     async function loop() {
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
       await predict();
       requestAnimationFrame(loop);
     }
-  
+
     async function predict() {
       const imageData = canvas.toDataURL("image/jpeg");
-  
+
       try {
         const response = await fetch("/predict", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ image: imageData }),
         });
-  
+
         const result = await response.json();
         const predictions = result.predictions;
-  
+
         if (predictions?.length) {
           const top = predictions.sort((a, b) => b.confidence - a.confidence)[0];
           const detected = top.class;
-  
+
           labelContainer.innerHTML = `🎯 Target: ${quizLetters[targetLetterIndex]}<br>✋ Detected: ${detected}`;
-  
+
           if (detected === quizLetters[targetLetterIndex]) {
             if (!holdStartTime) {
               holdStartTime = Date.now();
@@ -138,14 +136,14 @@
         labelContainer.innerText = "❌ Prediction error.";
       }
     }
-  
+
     function updateLetterDisplay() {
       const letter = quizLetters[targetLetterIndex];
       currentLetterHeader.innerText = `Quiz Letter: ${letter}`;
-      aslImage.src = `/static/quiz_images/${letter}.jpg`;
+      aslImage.src = `/static/images2/${letter}.jpg`;
       aslImage.alt = `Letter ${letter}`;
     }
-  
+
     function goToNextLetter() {
       holdStartTime = null;
       successSound.currentTime = 0;
@@ -153,7 +151,7 @@
       targetLetterIndex++;
       handleLetterChange();
     }
-  
+
     function handleNextClick() {
       if (targetLetterIndex >= quizLetters.length) {
         quizLetters = [...originalLetters];
@@ -169,7 +167,7 @@
         handleLetterChange();
       }
     }
-  
+
     function handleLetterChange() {
       if (targetLetterIndex < quizLetters.length) {
         updateLetterDisplay();
@@ -181,16 +179,16 @@
         aslImage.src = "/static/images/done.jpg";
         aslImage.alt = "All signs complete";
         video.pause();
-        nextButton.innerText = "Restart Quiz";
+        nextButton.innerText = "Start Over";
       }
     }
-  
+
     function feedback(status) {
       const feedbackContainer = document.getElementById("feedback");
       feedbackContainer.innerHTML = status === "correct" ? '<span class="check-mark">✔️ Correct!</span>' : "";
     }
-  
+
     init();
-  </script>  
+  </script>
 </body>
 </html>
