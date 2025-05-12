@@ -6,12 +6,13 @@ import os
 app = Flask(__name__)
 
 # Load API key from environment or hardcode it temporarily (but NOT for production)
-ROBOFLOW_API_KEY = os.getenv("ROBOFLOW_API_KEY", "Co4G0VLFnqzAKJal6i0C")
+ROBOFLOW_API_KEY = "Co4G0VLFnqzAKJal6i0C"
 
 client = InferenceHTTPClient(
-    api_url="https://serverless.roboflow.com",
+    api_url="https://detect.roboflow.com",  # or "https://detect.roboflow.com" depending on version
     api_key=ROBOFLOW_API_KEY
 )
+
 
 @app.route('/')
 def home():
@@ -42,7 +43,7 @@ def predict():
             f.write(image_bytes)
 
         # Perform inference
-        result = client.infer(temp_image_path, model_id="american-sign-language-letters-gxpdm/4")
+        result = client.infer(temp_image_path, model_id="american-sign-language-letters-gxpdm-ugxsf/6")
 
         # Clean up
         os.remove(temp_image_path)
