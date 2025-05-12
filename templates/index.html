@@ -22,8 +22,8 @@
     }
 
     #modeButtons {
-      display: none;
-      flex-direction: column;
+      display: flex;
+      flex-direction: row;
       justify-content: center;
       align-items: center;
       height: 100vh;
@@ -34,7 +34,7 @@
     .button {
       background-color: #FFB6B6;
       border: none;
-      padding: 12px 24px;
+      padding: 12px 64px;
       font-size: 1.2em;
       border-radius: 25px;
       cursor: pointer;
@@ -61,20 +61,65 @@ p {
  
 }
 
+.disclaimer {
+  margin-top: 150px;
+  max-width: 400px;
+  font-size: 0.9rem;
+  color: #0db4b9;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.subtitle p {
+  font-size: 1.4rem; /* Adjust as needed */
+  margin: 5px 0;
+}
+
+.slide-in {
+  opacity: 0;
+  transform: translateY(30px);
+  animation: slideIn 0.7s ease-out forwards;
+}
+
+.slide-in:nth-child(1) { animation-delay: 0s; }
+.slide-in:nth-child(2) { animation-delay: 0.2s; }
+.slide-in:nth-child(3) { animation-delay: 0.4s; }
+.slide-in:nth-child(4) { animation-delay: 0.6s; }
+.slide-in:nth-child(5) { animation-delay: 0.8s; }
+
+@keyframes slideIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
   </style>
 </head>
 <body>
   <div class="container" id="mainContent">
-    <h1>Sign<span class="cursive">Flow</span></h1>
-    <p>Learn the ABC in American Sign Language</p>
-    <p>With machine learning</p>
-    <button class="button" id="startButton">Start</button>
-    <p>The purpose of this website is to teach the ASL alphabet.</p>
+    <h1 class = "slide-in">Sign<span class="cursive">Flow</span></h1>
+    <div class = "subtitle">
+      <p class = "slide-in">Learn the ABC in American Sign Language</p>
+      <p class = "slide-in">With machine learning</p>
+    </div>
+    <button class="button slide-in" id="startButton">Start Now</button>
+    <p class="disclaimer slide-in">
+      This website will be using your webcam and machine learning to analyze your hand gestures.
+      Everything is processed locally and no webcam data will be sent or stored anywhere.
+    </p>
   </div>
 
-  <div id="modeButtons" style="display: none; flex-direction: column; gap: 20px;">
-    <button class="button" onclick="location.href='/learn'">Learn</button>
-    <button class="button" onclick="location.href='/quiz'">Quiz</button>
+  <div id="modeButtons" style="display: none; flex-direction: column; align-items: center; gap: 20px;">
+    <div style="text-align: center;">
+      <h2 style="color: teal; font-weight: bold;">Select a Mode</h2>
+      <p style="color: teal;">Do you want to practice or test yourself?</p>
+    </div>
+  
+    <div style="display: flex; flex-direction: row; gap: 20px;">
+      <button class="button" onclick="location.href='/learn'">Learn</button>
+      <button class="button" onclick="location.href='/quiz'">Quiz</button>
+    </div>
   </div>
 
   <script>
