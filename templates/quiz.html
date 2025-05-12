@@ -120,7 +120,7 @@
           if (detected === quizLetters[targetLetterIndex]) {
             if (!holdStartTime) {
               holdStartTime = Date.now();
-            } else if (Date.now() - holdStartTime >= 500) {
+            } else if (Date.now() - holdStartTime >= 0) {
               feedback("correct");
               goToNextLetter();
             }
