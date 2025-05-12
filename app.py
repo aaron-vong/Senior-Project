@@ -43,7 +43,7 @@ def predict():
             f.write(image_bytes)
 
         # Perform inference
-        result = client.infer(temp_image_path, model_id="american-sign-language-letters-gxpdm-ugxsf/6")
+        result = client.infer(temp_image_path, model_id="american-sign-language-letters-gxpdm-ugxsf/9")
 
         # Clean up
         os.remove(temp_image_path)
