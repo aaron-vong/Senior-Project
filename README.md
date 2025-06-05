@@ -25,3 +25,5 @@ Make ASL learning accessible and interactive
 Demonstrate real-time machine learning inference in the browser
 
 Encourage inclusive design and language accessibility
+
+
