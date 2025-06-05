@@ -18,3 +18,10 @@ Learn Mode: Users are introduced to each letter of the ASL alphabet with visual 
 Quiz Mode: Users are prompted with random letters and asked to perform the correct ASL gesture, which is recognized via Roboflow’s image detection model.
 
 The app relies on a pre-trained machine learning model hosted via Roboflow, which performs gesture recognition in real-time using the user’s webcam.
+
+# Project Goals
+Make ASL learning accessible and interactive
+
+Demonstrate real-time machine learning inference in the browser
+
+Encourage inclusive design and language accessibility
