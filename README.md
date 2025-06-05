@@ -10,6 +10,8 @@ SignFlow is an interactive web application designed to help users learn the Amer
 
 * Roboflow – ASL image recognition and gesture tracking
 
+* cPanel - Deploymnet and hosting
+
 # Architechture
 SignFlow is a fully client-side web application. All logic runs directly in the user's browser, making it lightweight and simple to deploy.
 
