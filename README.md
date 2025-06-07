@@ -6,7 +6,7 @@ SignFlow is an interactive web application designed to help users learn the Amer
 
 * CSS3 – Styling and layout
 
-* JavaScript – Interactivity and logic
+* Python – Interactivity and logic
 
 * Roboflow – ASL image recognition and gesture tracking
 
